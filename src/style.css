@@ -1,0 +1,121 @@
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap");
+
+html,
+body,
+#app {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+}
+
+@theme {
+  /* Tipografía */
+  --font-headline: "Epilogue", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  /* Escala tipográfica */
+  --text-headline: 3.5rem;
+  --text-headline--line-height: 1.05;
+  --text-headline--font-weight: 700;
+
+  --text-title: 1.75rem;
+  --text-title--line-height: 1.2;
+  --text-title--font-weight: 700;
+
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.5;
+
+  --text-body: 1rem;
+  --text-body--line-height: 1.5;
+
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.3;
+  --text-label--font-weight: 600;
+
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.3;
+
+  /* Radios */
+  --radius-control: 0.625rem;
+  --radius-card: 1rem;
+  --radius-pill: 999px;
+
+  /* Primary — #C84B31 */
+  --color-primary-50: #fbf2f1;
+  --color-primary-100: #f6e3df;
+  --color-primary-200: #edc5bc;
+  --color-primary-300: #e4a699;
+  --color-primary-400: #db8877;
+  --color-primary-500: #d16954;
+  --color-primary-600: #c84b31;
+  --color-primary-700: #973a26;
+  --color-primary-800: #66291b;
+  --color-primary-900: #351710;
+  --color-primary-950: #1d0f0a;
+
+  /* Secondary — #2D2424 */
+  --color-secondary-50: #f0f0f0;
+  --color-secondary-100: #e3e2e2;
+  --color-secondary-200: #c9c7c7;
+  --color-secondary-300: #afacac;
+  --color-secondary-400: #959191;
+  --color-secondary-500: #7b7575;
+  --color-secondary-600: #615a5a;
+  --color-secondary-700: #473f3f;
+  --color-secondary-800: #2d2424;
+  --color-secondary-900: #151110;
+  --color-secondary-950: #090706;
+
+  /* Tertiary — #D99B43 */
+  --color-tertiary-50: #fcf8f2;
+  --color-tertiary-100: #f8eede;
+  --color-tertiary-200: #f1d9b8;
+  --color-tertiary-300: #e9c491;
+  --color-tertiary-400: #e1b06a;
+  --color-tertiary-500: #d99b43;
+  --color-tertiary-600: #b07e37;
+  --color-tertiary-700: #86602b;
+  --color-tertiary-800: #5d431e;
+  --color-tertiary-900: #332512;
+  --color-tertiary-950: #1f170c;
+
+  /* Neutral — #F5F2EB */
+  --color-neutral-50: #fefefe;
+  --color-neutral-100: #f5f2eb;
+  --color-neutral-200: #dfdcd5;
+  --color-neutral-300: #c8c5bf;
+  --color-neutral-400: #b2afa9;
+  --color-neutral-500: #9b9892;
+  --color-neutral-600: #85827c;
+  --color-neutral-700: #6e6b66;
+  --color-neutral-800: #58554f;
+  --color-neutral-900: #413e3a;
+  --color-neutral-950: #36332f;
+}
+
+/* Alias sueltos, por si el resto del código ya usa var(--primary) etc. */
+:root {
+  --primary: var(--color-primary-600);
+  --secondary: var(--color-secondary-800);
+  --tertiary: var(--color-tertiary-500);
+  --neutral: var(--color-neutral-100);
+}
+
+/* ---------------------------------------------------------
+   Base
+--------------------------------------------------------- */
+@layer base {
+  body {
+    font-family: var(--font-body);
+    color: var(--color-secondary-800);
+    background-color: var(--color-neutral-100);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-headline);
+  }
+}
