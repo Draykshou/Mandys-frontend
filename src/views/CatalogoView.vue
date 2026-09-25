@@ -136,7 +136,7 @@ function exportar() {
 
 <template>
   <AppHeader/>
-  <div class="flex h-screen bg-neutral-100 text-secondary-800">
+  <div class="flex h-screen bg-neutral-100 text-secondary-800 pt-16">
     <AppSidebar :items="sidebarItems" :active-key="catalogoActivo" :usuario="{ nombre: 'Carlos Medina', rol: 'Gerente de operaciones' }"  @seleccionar="seleccionarCatalogo" @perfil="seleccionarPerfil" />
 
     <div class="flex flex-1 flex-col overflow-hidden">

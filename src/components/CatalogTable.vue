@@ -89,7 +89,7 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
           <tr
             v-for="row in rows"
             :key="row.id"
-            class="border-b border-neutral-50 last:border-0 hover:bg-neutral-100/60"
+            class="border-b border-neutral-50 last:border-0 hover:bg-neutral-100/60" 
           >
             <td v-for="(col, index) in columns" :key="col.key" class="px-6 py-4" :class="claseAlineacion(col)">
               <span
