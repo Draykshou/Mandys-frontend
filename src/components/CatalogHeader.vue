@@ -24,7 +24,7 @@ const emit = defineEmits<{
                                 hover:bg-primary-700 hover:shadow-md transition-all duration-300
                                 active:bg-primary-800 active:shadow-sm" 
                                 @click="emit('agregar')">
-      <Plus :size="24" class="text-(--neutral)"/>
+      <Plus :size="20" class="text-(--neutral)"/>
       {{ textoBoton }}
     </button>
   </div>

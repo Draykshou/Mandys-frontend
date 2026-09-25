@@ -53,7 +53,7 @@ const productos: CatalogoDef = {
 const platillos: CatalogoDef = {
   titulo: 'Platillos',
   subtitulo: 'Administra el menú y las recetas de cada platillo.',
-  textoBoton: 'Agregar Platillo',
+  textoBoton:'Agregar Platillo',
   categorias: ['Todas las categorías', 'Entradas', 'Fuertes', 'Postres'],
   columns: [
     { key: 'id', label: 'ID', type: 'text' },
@@ -137,42 +137,49 @@ function exportar() {
 </script>
 
 <template>
-  <AppHeader :usuario="{ nombre: 'Carlos Medina', rol: 'Gerente de operaciones' }" />
-  <div class="flex h-screen bg-neutral-100 text-secondary-800">
-    <AppSidebar :items="sidebarItems" :active-key="catalogoActivo" @seleccionar="seleccionarCatalogo" />
+  <div class="flex h-screen flex-col bg-neutral-100 text-secondary-800">
+    <AppHeader />
+    
+    <div class="flex flex-1 overflow-hidden">
+      <AppSidebar 
+        :items="sidebarItems" 
+        :active-key="catalogoActivo" 
+        :usuario="{ nombre: 'Carlos Medina', rol: 'Gerente de operaciones' }"
+        @seleccionar="seleccionarCatalogo" 
+      />
 
-    <div class="flex flex-1 flex-col overflow-hidden">
+      <div class="flex flex-1 flex-col overflow-hidden">
+        <main class="flex-1 overflow-y-auto px-8 py-8">
+          <CatalogHeader
+            :titulo="catalogoActual.titulo"
+            :subtitulo="catalogoActual.subtitulo"
+            :texto-boton="catalogoActual.textoBoton"
+            @agregar="() => console.log('Agregar en', catalogoActivo)"
+          />
 
-      <main class="flex-1 overflow-y-auto px-8 py-8">
-        <CatalogHeader
-          :titulo="catalogoActual.titulo"
-          :subtitulo="catalogoActual.subtitulo"
-          :texto-boton="catalogoActual.textoBoton"
-          @agregar="() => console.log('Agregar en', catalogoActivo)"
-        />
+          <CatalogFilter
+            v-model:busqueda="filtro.busqueda"
+            v-model:categoria="filtro.categoria"
+            :categorias="catalogoActual.categorias"
+            @buscar="buscar"
+            @limpiar="limpiarFiltro"
+          />
 
-        <CatalogFilter
-          v-model:busqueda="filtro.busqueda"
-          v-model:categoria="filtro.categoria"
-          :categorias="catalogoActual.categorias"
-          @buscar="buscar"
-          @limpiar="limpiarFiltro"
-        />
-
-        <CatalogTable
-          :titulo="catalogoActual.titulo"
-          :columns="catalogoActual.columns"
-          :rows="catalogoActual.rows"
-          :total-registros="catalogoActual.rows.length"
-          :pagina="pagina"
-          :total-paginas="totalPaginas"
-          @editar="editarFila"
-          @eliminar="eliminarFila"
-          @accion="manejarAccion"
-          @exportar="exportar"
-          @cambiar-pagina="(p) => (pagina = p)"
-        />
-      </main>
+          <CatalogTable
+            :titulo="catalogoActual.titulo"
+            :columns="catalogoActual.columns"
+            :rows="catalogoActual.rows"
+            :total-registros="catalogoActual.rows.length"
+            :pagina="pagina"
+            :total-paginas="totalPaginas"
+            @editar="editarFila"
+            @eliminar="eliminarFila"
+            @accion="manejarAccion"
+            @exportar="exportar"
+            @cambiar-pagina="(p) => (pagina = p)"
+          />
+        </main>
+      </div>
     </div>
   </div>
 </template>
