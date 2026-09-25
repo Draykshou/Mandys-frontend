@@ -1,13 +1,21 @@
 <script setup lang="ts">
 import type { SidebarItem } from '@/catalog'
+import { CircleUser } from 'lucide-vue-next'
+
+interface Usuario {
+  nombre: string
+  rol: string
+}
 
 defineProps<{
   items: SidebarItem[]
   activeKey: string
+  usuario: Usuario
 }>()
 
 const emit = defineEmits<{
   seleccionar: [key: string]
+  perfil: []
 }>()
 
 // Borra y cambialo por icocnos despues
@@ -23,7 +31,8 @@ const ICON_PATHS: Record<SidebarItem['icon'], string> = {
 <template>
   <aside class="flex w-60 shrink-0 flex-col border-r border-neutral-200 bg-neutral-50">
     <nav class="flex-1 space-y-1 px-3 py-4">
-      <button
+      <div>
+        <button
         v-for="item in items":key="item.key"
         type="button"
         class="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-label"
@@ -43,6 +52,17 @@ const ICON_PATHS: Record<SidebarItem['icon'], string> = {
         >
           {{ item.count }}
         </span>
+      </button>
+      </div>
+
+      <button class="flex items-center gap-3" @click="emit('perfil')">
+        <div class="text-right leading-tight">
+          <p class="text-label text-neutral-50">{{ usuario.nombre }}</p>
+          <p class="text-caption text-primary-100">{{ usuario.rol }}</p>
+        </div>
+        <div class="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-50/20">
+          <CircleUser class="h-5 w-5" />
+        </div>
       </button>
     </nav>
   </aside>

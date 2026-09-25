@@ -7,10 +7,6 @@ import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import type { CatalogColumn, CatalogRow, SidebarItem } from '@/catalog'
 
-/* -------------------------------------------------------
-   1. Definición de cada catálogo: sus columnas y sus filas.
-   Esto es lo ÚNICO que cambia entre Productos, Platillos, etc.
-------------------------------------------------------- */
 interface CatalogoDef {
   titulo: string
   subtitulo: string
@@ -70,9 +66,7 @@ const platillos: CatalogoDef = {
 
 const catalogos: Record<string, CatalogoDef> = { productos, platillos }
 
-/* -------------------------------------------------------
-   2. Estado de navegación / catálogo activo
-------------------------------------------------------- */
+
 const sidebarItems: SidebarItem[] = [
   { key: 'productos', label: 'Productos', icon: 'box', count: 24 },
   { key: 'platillos', label: 'Platillos', icon: 'book', count: 12 },
@@ -91,6 +85,10 @@ function seleccionarCatalogo(key: string) {
     filtro.categoria = catalogoActual.value.categorias[0]
     pagina.value = 1
   }
+}
+
+function seleccionarPerfil() {
+  console.log('Seleccionar perfil de usuario')
 }
 
 /* -------------------------------------------------------
@@ -137,9 +135,9 @@ function exportar() {
 </script>
 
 <template>
-  <AppHeader :usuario="{ nombre: 'Carlos Medina', rol: 'Gerente de operaciones' }" />
+  <AppHeader/>
   <div class="flex h-screen bg-neutral-100 text-secondary-800">
-    <AppSidebar :items="sidebarItems" :active-key="catalogoActivo" @seleccionar="seleccionarCatalogo" />
+    <AppSidebar :items="sidebarItems" :active-key="catalogoActivo" :usuario="{ nombre: 'Carlos Medina', rol: 'Gerente de operaciones' }"  @seleccionar="seleccionarCatalogo" @perfil="seleccionarPerfil" />
 
     <div class="flex flex-1 flex-col overflow-hidden">
 
