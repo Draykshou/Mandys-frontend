@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { CatalogColumn, CatalogRow } from '@/catalog'
+import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 import { Sheet, Pencil, Trash, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 const props = withDefaults(
