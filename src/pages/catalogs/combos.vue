@@ -6,6 +6,7 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
+import CatalogDeleteModal from '@/components/DeleteModal.vue'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
 
 import type { Combos } from '@/types/combosDtos'
@@ -37,6 +38,9 @@ const CombosColumn: CatalogoDef = {
 const pagina = ref(1)
 const totalPaginas = ref(1)
 
+const mostrarEliminar = ref(false)
+const filaEliminar = ref<CatalogRow | null>(null)
+
 // Filtro
 const filtro = reactive({
   busqueda: '',
@@ -59,7 +63,24 @@ function editarFila(row: CatalogRow) {
 }
 
 function eliminarFila(row: CatalogRow) {
-  console.log('Eliminar', row)
+  filaEliminar.value = row
+  mostrarEliminar.value = true
+}
+
+function cancelarEliminar() {
+  mostrarEliminar.value = false
+  filaEliminar.value = null
+}
+
+function confirmarEliminar(payload: {
+  row: CatalogRow
+  motivo: string
+}) {
+  console.log('Eliminar:', payload.row)
+  console.log('Motivo:', payload.motivo)
+
+  mostrarEliminar.value = false
+  filaEliminar.value = null
 }
 
 function manejarAccion(payload: { columnKey: string; row: CatalogRow }) {
@@ -119,6 +140,14 @@ onMounted(async () => {
           @accion="manejarAccion"
           @exportar="exportar"
           @cambiar-pagina="(p) => (pagina = p)"
+        />
+
+        <CatalogDeleteModal
+        :visible="mostrarEliminar"
+        :row="filaEliminar"
+        :descripcion="filaEliminar?.name"
+        @cancelar="cancelarEliminar"
+        @confirmar="confirmarEliminar"
         />
       </main>
     </div>
