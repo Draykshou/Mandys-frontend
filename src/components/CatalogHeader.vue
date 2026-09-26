@@ -19,7 +19,7 @@ const emit = defineEmits<{
       <p class="mt-1 text-body text-neutral-600">{{ subtitulo }}</p>
     </div>
 
-    <button type="button" class="flex flex-row gap-2 items-center rounded-xl p-2 
+    <button type="button" class="flex flex-row gap-1 items-center rounded-xl p-2 
                                 btn btn-primary bg-(--primary) text-neutral-100 text-xl text-bold shadow-sm
                                 hover:bg-primary-700 hover:shadow-md transition-all duration-300
                                 active:bg-primary-800 active:shadow-sm" 
