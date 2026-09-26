@@ -13,7 +13,9 @@ let refreshPromise: Promise<void> | null = null;
 
 function doRefresh(): Promise<void> {
   if (!refreshPromise) {
-    refreshPromise = api.post("/refresh").then(() => undefined).finally(() => {
+    refreshPromise = api.post("/refresh", {}, {
+      headers: { "Content-Type": "application/json" }
+    }).then(() => undefined).finally(() => {
       refreshPromise = null;
     });
   }

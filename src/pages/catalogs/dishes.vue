@@ -6,10 +6,13 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
+import CreateDishModal from '@/components/CreateDishModal.vue'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
 
 import type { Dishes } from '@/types/DishesDtos'
 import { getDishes } from '@/service/DishesService'
+
+const showCreateModal = ref(false)
 
 interface CatalogoDef {
   titulo: string
@@ -70,18 +73,17 @@ function exportar() {
   
 }
 
-onMounted(async () => {
-  try{
-    Dishes.value = await getDishes();
+const cargarPlatillos = async () => {
+  try {
+    Dishes.value = await getDishes()
     pagina.value = Dishes.value.page
     totalPaginas.value = Dishes.value.totalPage
+  } catch (err) {
+    console.error('Error al cargar platillos:', err)
+  }
+}
 
-    console.log(Dishes.value)
-  }
-  catch(err){
-    console.error('Error al iniciar sesión:', err)
-  }
-})
+onMounted(cargarPlatillos)
 </script>
 
 <template>
@@ -96,7 +98,13 @@ onMounted(async () => {
           :titulo="DishesColumn.titulo"
           :subtitulo="DishesColumn.subtitulo"
           :texto-boton="DishesColumn.textoBoton"
-          @agregar="() => console.log('Agregar en', DishesColumn)"
+          @agregar="showCreateModal = true"
+        />
+
+        <CreateDishModal
+          v-if="showCreateModal"
+          @close="showCreateModal = false"
+          @saved="cargarPlatillos"
         />
 
         <CatalogFilter

@@ -2,6 +2,27 @@
 import { computed } from 'vue'
 import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 import { Sheet, Pencil, Trash, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { animate } from 'animejs'
+
+const onBeforeEnter = (el: Element) => {
+  const htmlEl = el as HTMLElement
+  htmlEl.style.opacity = '0'
+  htmlEl.style.transform = 'translateY(20px)'
+}
+
+const onEnter = (el: Element, done: () => void) => {
+  const htmlEl = el as HTMLElement
+  const index = Number(htmlEl.dataset.index) || 0
+  
+  animate(el, {
+    opacity: 1,
+    y: 0,
+    delay: index * 50,
+    duration: 600,
+    ease: 'outElastic',
+    onComplete: done
+  })
+}
 
 const props = withDefaults(
   defineProps<{
@@ -85,10 +106,11 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
           </tr>
         </thead>
 
-        <tbody>
+        <TransitionGroup tag="tbody" @before-enter="onBeforeEnter" @enter="onEnter">
           <tr
-            v-for="row in rows"
+            v-for="(row, index) in rows"
             :key="row.id"
+            :data-index="index"
             class="border-b border-neutral-50 last:border-0 hover:bg-neutral-100/60" 
           >
             <td v-for="(col, index) in columns" :key="col.key" class="px-6 py-4" :class="claseAlineacion(col)">
@@ -129,7 +151,7 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
               No hay registros para mostrar.
             </td>
           </tr>
-        </tbody>
+        </TransitionGroup>
       </table>
     </div>
 
