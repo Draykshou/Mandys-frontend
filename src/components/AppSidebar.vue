@@ -40,10 +40,10 @@ const menuItems = [
     path: '/catalogs/combos',
   },
   {
-    key: 'warehouse',
+    key: 'storage',
     label: 'Almacén',
     icon: Package,
-    path: '/catalogs/warehouse',
+    path: '/catalogs/storage',
   },
   {
     key: 'branches',
