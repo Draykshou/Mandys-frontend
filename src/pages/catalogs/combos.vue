@@ -7,6 +7,7 @@ import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import CatalogDeleteModal from '@/components/DeleteModal.vue'
+import AppToast from '@/components/AppToast.vue'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
 
 import type { Combos } from '@/types/combosDtos'
@@ -40,6 +41,8 @@ const totalPaginas = ref(1)
 
 const mostrarEliminar = ref(false)
 const filaEliminar = ref<CatalogRow | null>(null)
+const mostrarToast = ref(false)
+const mensajeToast = ref('')
 
 // Filtro
 const filtro = reactive({
@@ -58,6 +61,15 @@ function buscar() {
  
 }
 
+function mostrarMensaje(mensaje: string) {
+  mensajeToast.value = mensaje
+  mostrarToast.value = true
+
+  setTimeout(() => {
+    mostrarToast.value = false
+  }, 3000)
+}
+
 function editarFila(row: CatalogRow) {
   console.log('editar', row)
 }
@@ -72,15 +84,24 @@ function cancelarEliminar() {
   filaEliminar.value = null
 }
 
-function confirmarEliminar(payload: {
+async function confirmarEliminar(payload: {
   row: CatalogRow
   motivo: string
 }) {
-  console.log('Eliminar:', payload.row)
-  console.log('Motivo:', payload.motivo)
+  try {
+    console.log('Eliminar:', payload.row)
+    console.log('Motivo:', payload.motivo)
 
-  mostrarEliminar.value = false
-  filaEliminar.value = null
+    mostrarMensaje('Platillo eliminado correctamente')
+
+    mostrarEliminar.value = false
+    filaEliminar.value = null
+
+  } catch (error) {
+    console.error('Error al eliminar:', error)
+
+    mostrarMensaje('No se pudo eliminar el platillo')
+  }
 }
 
 function manejarAccion(payload: { columnKey: string; row: CatalogRow }) {
@@ -148,6 +169,12 @@ onMounted(async () => {
         :descripcion="filaEliminar?.name"
         @cancelar="cancelarEliminar"
         @confirmar="confirmarEliminar"
+        />
+
+        <AppToast
+        :visible="mostrarToast"
+        :mensaje="mensajeToast"
+        @cerrar="mostrarToast = false"
         />
       </main>
     </div>
