@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -56,7 +56,7 @@ function buscar() {
 }
 
 function editarFila(row: CatalogRow) {
-  console.log('editar', row)
+  editeEnable.value = true
 }
 
 function eliminarFila(row: CatalogRow) {
@@ -70,6 +70,15 @@ function manejarAccion(payload: { columnKey: string; row: CatalogRow }) {
 function exportar() {
   
 }
+
+function cerrarModal() {
+  editeEnable.value = false
+}
+
+// modales
+
+const editeEnable = ref(false)
+const deliteEnable = ref(false)
 
 onMounted(async () => {
   try{
@@ -122,6 +131,25 @@ onMounted(async () => {
           @cambiar-pagina="(p) => (pagina = p)"
         />
       </main>
+    </div>
+  </div>
+
+  <div v-if="editeEnable">
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      @click.self="cerrarModal"
+    >
+      <div class="w-full max-w-lg rounded-xl bg-neutral-100 shadow-xl">
+        <div class="mb-6 flex flex-col w-full py-6 px-6 border-b border-neutral-300">
+          <h2 class="text-title text-secondary-800">
+            Modificar Producto
+          </h2>
+          <p>Actualiza los datos del producto seleccionado para venta directa o consumo interno.</p>
+        </div>
+        <div>
+          
+        </div>
+      </div>
     </div>
   </div>
 </template>
