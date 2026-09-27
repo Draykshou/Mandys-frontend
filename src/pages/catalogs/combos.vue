@@ -6,6 +6,8 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
+import CatalogDeleteModal from '@/components/DeleteModal.vue'
+import AppToast from '@/components/AppToast.vue'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
 
 import type { Combos } from '@/types/combosDtos'
@@ -37,6 +39,11 @@ const CombosColumn: CatalogoDef = {
 const pagina = ref(1)
 const totalPaginas = ref(1)
 
+const mostrarEliminar = ref(false)
+const filaEliminar = ref<CatalogRow | null>(null)
+const mostrarToast = ref(false)
+const mensajeToast = ref('')
+
 // Filtro
 const filtro = reactive({
   busqueda: '',
@@ -54,12 +61,47 @@ function buscar() {
  
 }
 
+function mostrarMensaje(mensaje: string) {
+  mensajeToast.value = mensaje
+  mostrarToast.value = true
+
+  setTimeout(() => {
+    mostrarToast.value = false
+  }, 3000)
+}
+
 function editarFila(row: CatalogRow) {
   console.log('editar', row)
 }
 
 function eliminarFila(row: CatalogRow) {
-  console.log('Eliminar', row)
+  filaEliminar.value = row
+  mostrarEliminar.value = true
+}
+
+function cancelarEliminar() {
+  mostrarEliminar.value = false
+  filaEliminar.value = null
+}
+
+async function confirmarEliminar(payload: {
+  row: CatalogRow
+  motivo: string
+}) {
+  try {
+    console.log('Eliminar:', payload.row)
+    console.log('Motivo:', payload.motivo)
+
+    mostrarMensaje('Platillo eliminado correctamente')
+
+    mostrarEliminar.value = false
+    filaEliminar.value = null
+
+  } catch (error) {
+    console.error('Error al eliminar:', error)
+
+    mostrarMensaje('No se pudo eliminar el platillo')
+  }
 }
 
 function manejarAccion(payload: { columnKey: string; row: CatalogRow }) {
@@ -119,6 +161,20 @@ onMounted(async () => {
           @accion="manejarAccion"
           @exportar="exportar"
           @cambiar-pagina="(p) => (pagina = p)"
+        />
+
+        <CatalogDeleteModal
+        :visible="mostrarEliminar"
+        :row="filaEliminar"
+        :descripcion="filaEliminar?.name"
+        @cancelar="cancelarEliminar"
+        @confirmar="confirmarEliminar"
+        />
+
+        <AppToast
+        :visible="mostrarToast"
+        :mensaje="mensajeToast"
+        @cerrar="mostrarToast = false"
         />
       </main>
     </div>
