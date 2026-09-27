@@ -16,8 +16,11 @@ export interface Recipe {
 
 export interface CreateDish{
     name: string
-    price: boolean
-    recipe: Recipe
+    price: Number
+    recipe: {
+        productId: number
+        quantity: number
+    }[]
 }
 
 export interface UpdateDish{

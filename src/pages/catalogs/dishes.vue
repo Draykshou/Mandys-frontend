@@ -9,8 +9,8 @@ import CatalogTable from '@/components/CatalogTable.vue'
 import CreateDishModal from '@/components/CreateDishModal.vue'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
 
-import type { Dishes } from '@/types/DishesDtos'
-import { getDishes } from '@/service/DishesService'
+import type { CreateDish, Dishes } from '@/types/DishesDtos'
+import { getDishes, createDish } from '@/service/DishesService'
 
 const showCreateModal = ref(false)
 
@@ -57,20 +57,30 @@ function buscar() {
  
 }
 
-function editarFila(row: CatalogRow) {
+const insertRow = async (payload: CreateDish) => {
+  try {
+    await createDish(payload)
+    setTimeout(() => {}, 1800)
+  } catch (err: any) {
+    const serverMsg = err?.response?.data?.message
+    console.log("Error de inserción: " + serverMsg.value)
+  }
+}
+
+function updateRow(row: CatalogRow) {
   console.log('editar', row)
 }
 
-function eliminarFila(row: CatalogRow) {
+function deleteRow(row: CatalogRow) {
   console.log('Eliminar', row)
 }
 
-function manejarAccion(payload: { columnKey: string; row: CatalogRow }) {
+function handleAction(payload: { columnKey: string; row: CatalogRow }) {
   console.log('Acción', payload.columnKey, payload.row)
 }
 
 function exportar() {
-  
+
 }
 
 const cargarPlatillos = async () => {
@@ -103,8 +113,12 @@ onMounted(cargarPlatillos)
 
         <CreateDishModal
           v-if="showCreateModal"
+          :is-insert="false"
+          :titulo="'Agregar Producto'"
+          :subtitulo="'Ingresa la información que se te pide'"
           @close="showCreateModal = false"
-          @saved="cargarPlatillos"
+          @insert="insertRow"
+          @update="updateRow"
         />
 
         <CatalogFilter
@@ -122,9 +136,9 @@ onMounted(cargarPlatillos)
           :total-registros="Dishes?.totalCount ?? 0"
           :pagina="pagina"
           :total-paginas="totalPaginas"
-          @editar="editarFila"
-          @eliminar="eliminarFila"
-          @accion="manejarAccion"
+          @editar="updateRow"
+          @eliminar="deleteRow"
+          @accion="handleAction"
           @exportar="exportar"
           @cambiar-pagina="(p) => (pagina = p)"
         />

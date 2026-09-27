@@ -77,6 +77,7 @@ function cerrarModal() {
 
 // modales
 
+const insertEnable = ref(false)
 const editeEnable = ref(false)
 const deliteEnable = ref(false)
 
@@ -85,7 +86,6 @@ onMounted(async () => {
     products.value = await getProducts();
     pagina.value = products.value.page
     totalPaginas.value = products.value.totalPage
-
     console.log(products.value)
   }
   catch(err){
