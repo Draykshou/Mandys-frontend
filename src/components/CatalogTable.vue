@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
+import { formatCurrency } from '@/utils/format'
 import { Sheet, Pencil, Trash, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { animate } from 'animejs'
 
@@ -61,7 +62,7 @@ function valorCelda(row: CatalogRow, col: CatalogColumn) {
   if (valor === null || valor === undefined || valor === '') {
     return col.emptyLabel ?? '—'
   }
-  return String(valor)
+  return col.type === 'currency' ? formatCurrency(valor) : String(valor)
 }
 
 const rangoMostrado = computed(() => {
@@ -72,9 +73,9 @@ const rangoMostrado = computed(() => {
 })
 
 const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string> = {
-  primary: 'btn-primary',
-  secondary: 'btn-secondary',
-  outlined: 'btn-outlined',
+  primary: 'border-primary-600 bg-primary-600 text-neutral-50 hover:bg-primary-700 active:bg-primary-800',
+  secondary: 'border-secondary-800 bg-secondary-800 text-neutral-50 hover:bg-secondary-700 active:bg-secondary-900',
+  outlined: 'border-neutral-200 bg-neutral-50 text-secondary-700 hover:border-primary-600 hover:bg-primary-50 hover:text-primary-700 active:bg-primary-100',
 }
 </script>
 
@@ -125,9 +126,8 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
               <button
                 v-else-if="col.type === 'button'"
                 type="button"
-                class="btn border rounded-xl border-neutral-200 hover:bg-primary-600 active:bg-primary-700 hover:text-neutral-100 "
+                class="rounded-xl border px-3.5 py-1.5 text-caption font-semibold transition-colors"
                 :class="variantesBoton[col.buttonVariant ?? 'outlined']"
-                style="padding: 0.375rem 0.875rem; font-size: 0.8125rem"
                 @click="emit('accion', { columnKey: col.key, row })"
               >
                 {{ col.buttonLabel ?? 'Ver' }}
@@ -136,12 +136,24 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
             </td>
 
             <td class="px-6 py-4">
-              <div class="flex items-center justify-end gap-3 text-neutral-500">
-                <button class="hover:text-primary-600 active:text-primary-700" aria-label="Editar" @click="emit('editar', row)">
-                  <Pencil :size="20" />
+              <div class="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  class="action-button hover:bg-primary-100 hover:text-primary-700 active:bg-primary-200"
+                  title="Editar"
+                  aria-label="Editar"
+                  @click="emit('editar', row)"
+                >
+                  <Pencil :size="18" />
                 </button>
-                <button class="hover:text-primary-700 active:text-primary-800" aria-label="Eliminar" @click="emit('eliminar', row)">
-                  <Trash :size="20" />
+                <button
+                  type="button"
+                  class="action-button hover:bg-red-100 hover:text-red-600 active:bg-red-200"
+                  title="Eliminar"
+                  aria-label="Eliminar"
+                  @click="emit('eliminar', row)"
+                >
+                  <Trash :size="18" />
                 </button>
               </div>
             </td>

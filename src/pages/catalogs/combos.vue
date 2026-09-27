@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -7,11 +7,14 @@ import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import CatalogDeleteModal from '@/components/DeleteModal.vue'
+import ComboFormModal from '@/components/ComboFormModal.vue'
 import AppToast from '@/components/AppToast.vue'
+import { useToast } from '@/composables/useToast'
+import { mensajeDeError } from '@/utils/apiError'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
 
-import type { Combos } from '@/types/combosDtos'
-import { getCombos } from '@/service/CombosService'
+import type { Combo, Combos } from '@/types/CombosDtos'
+import { deleteCombo, getCombos } from '@/service/CombosService'
 
 interface CatalogoDef {
   titulo: string
@@ -24,25 +27,28 @@ interface CatalogoDef {
 const Combos = ref<Combos | null>(null)
 
 const CombosColumn: CatalogoDef = {
-  titulo: 'Platillos',
-  subtitulo: 'Gestión de los platillos del restaurante',
-  textoBoton: 'Agregar Platillo',
+  titulo: 'Combos',
+  subtitulo: 'Gestión de los combos del restaurante',
+  textoBoton: 'Agregar Combo',
   categorias: ['Todos', 'Bebidas', 'Comida', 'Postres'],
   columns: [
     { key: 'id', label: 'ID', type: 'text' },
     { key: 'name', label: 'Nombre', type: 'text' },
-    { key: 'price', label: 'Precio', type: 'text' },
-    { key: 'Dishes', label: 'Productos', type: 'button' },
+    { key: 'price', label: 'Precio', type: 'currency' },
+    { key: 'Dishes', label: 'Platillos', type: 'button' },
   ],
 }
 
 const pagina = ref(1)
 const totalPaginas = ref(1)
 
+const mostrarFormModal = ref(false)
+const comboEnEdicion = ref<Combo | null>(null)
+
 const mostrarEliminar = ref(false)
-const filaEliminar = ref<CatalogRow | null>(null)
-const mostrarToast = ref(false)
-const mensajeToast = ref('')
+const filaEliminar = ref<Combo | null>(null)
+
+const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
 // Filtro
 const filtro = reactive({
@@ -61,21 +67,32 @@ function buscar() {
  
 }
 
-function mostrarMensaje(mensaje: string) {
-  mensajeToast.value = mensaje
-  mostrarToast.value = true
+/** CatalogTable es genérico y entrega CatalogRow; en esta página siempre es un Combo. */
+const aCombo = (row: CatalogRow) => row as unknown as Combo
 
-  setTimeout(() => {
-    mostrarToast.value = false
-  }, 3000)
+function abrirNuevoCombo() {
+  comboEnEdicion.value = null
+  mostrarFormModal.value = true
 }
 
 function editarFila(row: CatalogRow) {
-  console.log('editar', row)
+  comboEnEdicion.value = aCombo(row)
+  mostrarFormModal.value = true
+}
+
+function comboGuardado() {
+  const combo = comboEnEdicion.value
+  cargarCombos()
+  mostrarToast(combo ? `"${combo.name}" se actualizó` : 'Combo agregado')
+}
+
+function cerrarFormModal() {
+  mostrarFormModal.value = false
+  comboEnEdicion.value = null
 }
 
 function eliminarFila(row: CatalogRow) {
-  filaEliminar.value = row
+  filaEliminar.value = aCombo(row)
   mostrarEliminar.value = true
 }
 
@@ -84,24 +101,21 @@ function cancelarEliminar() {
   filaEliminar.value = null
 }
 
-async function confirmarEliminar(payload: {
-  row: CatalogRow
-  motivo: string
-}) {
+async function confirmarEliminar() {
+  const combo = filaEliminar.value
+  if (!combo) return
+
+  mostrarEliminar.value = false
+  filaEliminar.value = null
+
   try {
-    console.log('Eliminar:', payload.row)
-    console.log('Motivo:', payload.motivo)
-
-    mostrarMensaje('Platillo eliminado correctamente')
-
-    mostrarEliminar.value = false
-    filaEliminar.value = null
-
-  } catch (error) {
-    console.error('Error al eliminar:', error)
-
-    mostrarMensaje('No se pudo eliminar el platillo')
+    await deleteCombo(String(combo.id))
+    mostrarToast(`"${combo.name}" se eliminó correctamente`, 'eliminar')
+  } catch (err) {
+    mostrarToast(mensajeDeError(err, 'No se pudo eliminar el combo'), 'error')
   }
+
+  await cargarCombos()
 }
 
 function manejarAccion(payload: { columnKey: string; row: CatalogRow }) {
@@ -112,18 +126,18 @@ function exportar() {
   
 }
 
-onMounted(async () => {
+const cargarCombos = async () => {
   try{
     Combos.value = await getCombos();
     pagina.value = Combos.value.page
     totalPaginas.value = Combos.value.totalPage
-
-    console.log(Combos.value)
   }
   catch(err){
-    console.error('Error al iniciar sesión:', err)
+    console.error('No se pudieron cargar los combos:', err)
   }
-})
+}
+
+onMounted(cargarCombos)
 </script>
 
 <template>
@@ -138,7 +152,14 @@ onMounted(async () => {
           :titulo="CombosColumn.titulo"
           :subtitulo="CombosColumn.subtitulo"
           :texto-boton="CombosColumn.textoBoton"
-          @agregar="() => console.log('Agregar en', CombosColumn)"
+          @agregar="abrirNuevoCombo"
+        />
+
+        <ComboFormModal
+          :open="mostrarFormModal"
+          :combo="comboEnEdicion"
+          @close="cerrarFormModal"
+          @saved="comboGuardado"
         />
 
         <CatalogFilter
@@ -172,9 +193,11 @@ onMounted(async () => {
         />
 
         <AppToast
-        :visible="mostrarToast"
-        :mensaje="mensajeToast"
-        @cerrar="mostrarToast = false"
+          :visible="toast.visible"
+          :mensaje="toast.mensaje"
+          :tipo="toast.tipo"
+          :duracion="toast.duracion"
+          @cerrar="cerrarToast"
         />
       </main>
     </div>

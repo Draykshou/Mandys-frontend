@@ -3,13 +3,26 @@ import { reactive, ref, onMounted } from 'vue'
 
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import AppToast from '@/components/AppToast.vue'
 import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
+import DeleteModal from '@/components/DeleteModal.vue'
+import ProductFormModal from '@/components/ProductFormModal.vue'
+import { useToast } from '@/composables/useToast'
+import { mensajeDeError } from '@/utils/apiError'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
 
-import type { Products } from '@/types/ProductsDtos'
-import { getProducts } from '@/service/ProductsService'
+import type { Product, Products } from '@/types/ProductsDtos'
+import { deleteProduct, getProducts } from '@/service/ProductsService'
+
+const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
+
+const mostrarFormModal = ref(false)
+const productEnEdicion = ref<Product | null>(null)
+
+const mostrarEliminar = ref(false)
+const productAEliminar = ref<Product | null>(null)
 
 interface CatalogoDef {
   titulo: string
@@ -30,7 +43,7 @@ const productsColumn: CatalogoDef = {
     { key: 'id', label: 'ID', type: 'text' },
     { key: 'description', label: 'Descripción', type: 'text' },
     { key: 'isSupply', label: 'Insumo', type: 'boolean' },
-    { key: 'price', label: 'Precio', type: 'text' },
+    { key: 'price', label: 'Precio', type: 'currency' },
     { key: 'measureUnit', label: 'Unidad de medida', type: 'text' },
   ],
 }
@@ -55,12 +68,50 @@ function buscar() {
  
 }
 
+/** CatalogTable es genérico y entrega CatalogRow; en esta página siempre es un Product. */
+const aProduct = (row: CatalogRow) => row as unknown as Product
+
+function abrirNuevoProducto() {
+  productEnEdicion.value = null
+  mostrarFormModal.value = true
+}
+
 function editarFila(row: CatalogRow) {
-  editeEnable.value = true
+  productEnEdicion.value = aProduct(row)
+  mostrarFormModal.value = true
+}
+
+function productoGuardado() {
+  const product = productEnEdicion.value
+  cargarProductos()
+  mostrarToast(product ? `"${product.description}" se actualizó` : 'Producto agregado')
+}
+
+function cerrarFormModal() {
+  mostrarFormModal.value = false
+  productEnEdicion.value = null
 }
 
 function eliminarFila(row: CatalogRow) {
-  console.log('Eliminar', row)
+  productAEliminar.value = aProduct(row)
+  mostrarEliminar.value = true
+}
+
+async function confirmarEliminar() {
+  const product = productAEliminar.value
+  if (!product) return
+
+  mostrarEliminar.value = false
+  productAEliminar.value = null
+
+  try {
+    await deleteProduct(String(product.id))
+    mostrarToast(`"${product.description}" se eliminó correctamente`, 'eliminar')
+  } catch (err) {
+    mostrarToast(mensajeDeError(err, 'No se pudo eliminar el producto'), 'error')
+  }
+
+  await cargarProductos()
 }
 
 function manejarAccion(payload: { columnKey: string; row: CatalogRow }) {
@@ -68,30 +119,21 @@ function manejarAccion(payload: { columnKey: string; row: CatalogRow }) {
 }
 
 function exportar() {
-  
+   
 }
 
-function cerrarModal() {
-  editeEnable.value = false
-}
-
-// modales
-
-const editeEnable = ref(false)
-const deliteEnable = ref(false)
-
-onMounted(async () => {
+const cargarProductos = async () => {
   try{
     products.value = await getProducts();
     pagina.value = products.value.page
     totalPaginas.value = products.value.totalPage
-
-    console.log(products.value)
   }
   catch(err){
-    console.error('Error al iniciar sesión:', err)
+    console.error('No se pudieron cargar los productos:', err)
   }
-})
+}
+
+onMounted(cargarProductos)
 </script>
 
 <template>
@@ -106,7 +148,21 @@ onMounted(async () => {
           :titulo="productsColumn.titulo"
           :subtitulo="productsColumn.subtitulo"
           :texto-boton="productsColumn.textoBoton"
-          @agregar="() => console.log('Agregar en', productsColumn)"
+          @agregar="abrirNuevoProducto"
+        />
+
+        <ProductFormModal
+          :open="mostrarFormModal"
+          :product="productEnEdicion"
+          @close="cerrarFormModal"
+          @saved="productoGuardado"
+        />
+
+        <DeleteModal
+          :visible="mostrarEliminar"
+          :row="productAEliminar"
+          @cancelar="mostrarEliminar = false"
+          @confirmar="confirmarEliminar"
         />
 
         <CatalogFilter
@@ -130,26 +186,15 @@ onMounted(async () => {
           @exportar="exportar"
           @cambiar-pagina="(p) => (pagina = p)"
         />
-      </main>
-    </div>
-  </div>
 
-  <div v-if="editeEnable">
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      @click.self="cerrarModal"
-    >
-      <div class="w-full max-w-lg rounded-xl bg-neutral-100 shadow-xl">
-        <div class="mb-6 flex flex-col w-full py-6 px-6 border-b border-neutral-300">
-          <h2 class="text-title text-secondary-800">
-            Modificar Producto
-          </h2>
-          <p>Actualiza los datos del producto seleccionado para venta directa o consumo interno.</p>
-        </div>
-        <div>
-          
-        </div>
-      </div>
+        <AppToast
+          :visible="toast.visible"
+          :mensaje="toast.mensaje"
+          :tipo="toast.tipo"
+          :duracion="toast.duracion"
+          @cerrar="cerrarToast"
+        />
+      </main>
     </div>
   </div>
 </template>

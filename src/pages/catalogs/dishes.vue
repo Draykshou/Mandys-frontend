@@ -1,18 +1,28 @@
 <script setup lang="ts">
-import { computed, reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import AppToast from '@/components/AppToast.vue'
 import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
-import CreateDishModal from '@/components/CreateDishModal.vue'
+import DeleteModal from '@/components/DeleteModal.vue'
+import DishFormModal from '@/components/DishFormModal.vue'
+import { useToast } from '@/composables/useToast'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
 
-import type { Dishes } from '@/types/DishesDtos'
-import { getDishes } from '@/service/DishesService'
+import type { Dish, Dishes } from '@/types/DishesDtos'
+import { deleteDish, getDishes } from '@/service/DishesService'
+import { mensajeDeError } from '@/utils/apiError'
 
-const showCreateModal = ref(false)
+const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
+
+const mostrarFormModal = ref(false)
+const dishEnEdicion = ref<Dish | null>(null)
+
+const mostrarEliminar = ref(false)
+const dishAEliminar = ref<Dish | null>(null)
 
 interface CatalogoDef {
   titulo: string
@@ -32,8 +42,8 @@ const DishesColumn: CatalogoDef = {
   columns: [
     { key: 'id', label: 'ID', type: 'text' },
     { key: 'name', label: 'Nombre', type: 'text' },
-    { key: 'price', label: 'Precio', type: 'text' },
-    { key: 'Recipe', label: 'Recetas', type: 'button' },
+    { key: 'price', label: 'Precio', type: 'currency' },
+    { key: 'recipe', label: 'Recetas', type: 'button' },
   ],
 }
 
@@ -57,12 +67,52 @@ function buscar() {
  
 }
 
+function abrirNuevoPlatillo() {
+  dishEnEdicion.value = null
+  mostrarFormModal.value = true
+}
+
+/** CatalogTable es genérico y entrega CatalogRow; en esta página siempre es un Dish. */
+const aDish = (row: CatalogRow) => row as unknown as Dish
+
 function editarFila(row: CatalogRow) {
-  console.log('editar', row)
+  dishEnEdicion.value = aDish(row)
+  mostrarFormModal.value = true
+}
+
+function platilloGuardado() {
+  const dish = dishEnEdicion.value
+  cargarPlatillos()
+  mostrarToast(
+    dish ? `"${dish.name}" se actualizó` : 'Platillo agregado',
+  )
+}
+
+function cerrarFormModal() {
+  mostrarFormModal.value = false
+  dishEnEdicion.value = null
 }
 
 function eliminarFila(row: CatalogRow) {
-  console.log('Eliminar', row)
+  dishAEliminar.value = aDish(row)
+  mostrarEliminar.value = true
+}
+
+async function confirmarEliminar() {
+  const dish = dishAEliminar.value
+  if (!dish) return
+
+  mostrarEliminar.value = false
+  dishAEliminar.value = null
+
+  try {
+    await deleteDish(String(dish.id))
+    mostrarToast(`"${dish.name}" se eliminó correctamente`, 'eliminar')
+  } catch (err) {
+    mostrarToast(mensajeDeError(err, 'No se pudo eliminar el platillo'), 'error')
+  }
+
+  await cargarPlatillos()
 }
 
 function manejarAccion(payload: { columnKey: string; row: CatalogRow }) {
@@ -98,13 +148,21 @@ onMounted(cargarPlatillos)
           :titulo="DishesColumn.titulo"
           :subtitulo="DishesColumn.subtitulo"
           :texto-boton="DishesColumn.textoBoton"
-          @agregar="showCreateModal = true"
+          @agregar="abrirNuevoPlatillo"
         />
 
-        <CreateDishModal
-          v-if="showCreateModal"
-          @close="showCreateModal = false"
-          @saved="cargarPlatillos"
+        <DishFormModal
+          :open="mostrarFormModal"
+          :dish="dishEnEdicion"
+          @close="cerrarFormModal"
+          @saved="platilloGuardado"
+        />
+
+        <DeleteModal
+          :visible="mostrarEliminar"
+          :row="dishAEliminar"
+          @cancelar="mostrarEliminar = false"
+          @confirmar="confirmarEliminar"
         />
 
         <CatalogFilter
@@ -127,6 +185,14 @@ onMounted(cargarPlatillos)
           @accion="manejarAccion"
           @exportar="exportar"
           @cambiar-pagina="(p) => (pagina = p)"
+        />
+
+        <AppToast
+          :visible="toast.visible"
+          :mensaje="toast.mensaje"
+          :tipo="toast.tipo"
+          :duracion="toast.duracion"
+          @cerrar="cerrarToast"
         />
       </main>
     </div>
