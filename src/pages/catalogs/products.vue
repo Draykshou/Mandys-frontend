@@ -3,13 +3,18 @@ import { reactive, ref, onMounted } from 'vue'
 
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import AppToast from '@/components/AppToast.vue'
 import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
+import { useToast } from '@/composables/useToast'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
+import ActionModal from '@/components/ActionModal.vue'
 
-import type { Products } from '@/types/ProductsDtos'
-import { getProducts } from '@/service/ProductsService'
+import type { Product, CreateProduct, UpdateProduct, Products } from '@/types/ProductsDtos'
+import { getProducts, postProduct, putProduct } from '@/service/ProductsService'
+
+const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
 interface CatalogoDef {
   titulo: string
@@ -30,7 +35,7 @@ const productsColumn: CatalogoDef = {
     { key: 'id', label: 'ID', type: 'text' },
     { key: 'description', label: 'Descripción', type: 'text' },
     { key: 'isSupply', label: 'Insumo', type: 'boolean' },
-    { key: 'price', label: 'Precio', type: 'text' },
+    { key: 'price', label: 'Precio', type: 'currency' },
     { key: 'measureUnit', label: 'Unidad de medida', type: 'text' },
   ],
 }
@@ -50,38 +55,70 @@ function limpiarFiltro() {
   filtro.categoria = productsColumn.categorias[0]
 }
 
-// Botones
 function buscar() {
  
 }
 
-function editarFila(row: CatalogRow) {
-  editeEnable.value = true
+const modalInsertEnable = ref(false)
+
+const modalUpdateEnable = ref(false)
+const currentRow = ref<Product | null>(null)
+
+// CUD
+const insertRow = async (description: string, isSupply: boolean, price: number, measureUnit: string) => {
+  const product : CreateProduct = {
+    description: description,
+    isSupply: isSupply,
+    price: price,
+    measureUnit: measureUnit
+  }
+  console.log("insert call")
+
+  try {
+    const response = await postProduct(product)
+    console.log(response)
+  } catch (err) {
+    console.error("No se pudo crear el producto:", err)
+  }
 }
 
-function eliminarFila(row: CatalogRow) {
-  console.log('Eliminar', row)
+const loadUpdateRowInformation = (row: CatalogRow) => {
+  currentRow.value = {
+    id: String(row.id),
+    description: String(row.description),
+    isSupply: Boolean(row.isSupply),
+    price: Number(row.price),
+    measureUnit: String(row.measureUnit),
+  }
+  modalUpdateEnable.value = true
 }
 
-function manejarAccion(payload: { columnKey: string; row: CatalogRow }) {
-  console.log('Acción', payload.columnKey, payload.row)
+const updateRow = async (description: string, isSupply: boolean, price: number, measureUnit: string) => {
+  const product : UpdateProduct = {
+    description: description,
+    isSupply: isSupply,
+    price: price,
+    measureUnit: measureUnit
+  }
+  console.log("update call")
+  try {
+    const response = await putProduct(currentRow.value?.id as string, product)
+    console.log(response)
+    window.location.reload()
+  } catch (err) {
+    console.error("No se pudo crear el producto:", err)
+  }
 }
 
-function exportar() {
+const deleteRow = (row: CatalogRow) => {
   
 }
 
-function cerrarModal() {
-  editeEnable.value = false
+const exportTable = () => {
+  
 }
 
-// modales
-
-const insertEnable = ref(false)
-const editeEnable = ref(false)
-const deliteEnable = ref(false)
-
-onMounted(async () => {
+const cargarProductos = async () => {
   try{
     products.value = await getProducts();
     pagina.value = products.value.page
@@ -89,9 +126,12 @@ onMounted(async () => {
     console.log(products.value)
   }
   catch(err){
-    console.error('Error al iniciar sesión:', err)
+    console.error('No se pudieron cargar los productos:', err)
   }
-})
+}
+
+onMounted(cargarProductos)
+
 </script>
 
 <template>
@@ -106,7 +146,7 @@ onMounted(async () => {
           :titulo="productsColumn.titulo"
           :subtitulo="productsColumn.subtitulo"
           :texto-boton="productsColumn.textoBoton"
-          @agregar="() => console.log('Agregar en', productsColumn)"
+          @agregar="modalInsertEnable = true"
         />
 
         <CatalogFilter
@@ -124,32 +164,41 @@ onMounted(async () => {
           :total-registros="products?.totalCount ?? 0"
           :pagina="pagina"
           :total-paginas="totalPaginas"
-          @editar="editarFila"
-          @eliminar="eliminarFila"
-          @accion="manejarAccion"
-          @exportar="exportar"
+          @editar="loadUpdateRowInformation"
+          @eliminar="deleteRow"
+          @exportar="exportTable"
           @cambiar-pagina="(p) => (pagina = p)"
         />
-      </main>
-    </div>
-  </div>
 
-  <div v-if="editeEnable">
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      @click.self="cerrarModal"
-    >
-      <div class="w-full max-w-lg rounded-xl bg-neutral-100 shadow-xl">
-        <div class="mb-6 flex flex-col w-full py-6 px-6 border-b border-neutral-300">
-          <h2 class="text-title text-secondary-800">
-            Modificar Producto
-          </h2>
-          <p>Actualiza los datos del producto seleccionado para venta directa o consumo interno.</p>
-        </div>
-        <div>
-          
-        </div>
-      </div>
+        <ActionModal
+          v-if="modalInsertEnable === true"
+          :is-insert="true"
+          :modal-title="'Crear producto'"
+          :modal-subtitle="'Ingrese los datos del producto'"
+          @close="modalInsertEnable = false"
+          @insert="insertRow"
+        />
+
+        <ActionModal
+          v-if="modalUpdateEnable === true"
+          :modal-title="'Modificar producto'"
+          :modal-subtitle="'cambie los datos del producto'"
+          @close="modalUpdateEnable = false"
+          @update="updateRow"
+          :description="currentRow?.description"
+          :is-supply="currentRow?.isSupply"
+          :price="currentRow?.price"
+          :measure-unit="currentRow?.measureUnit"
+        />
+
+        <AppToast
+          :visible="toast.visible"
+          :mensaje="toast.mensaje"
+          :tipo="toast.tipo"
+          :duracion="toast.duracion"
+          @cerrar="cerrarToast"
+        />
+      </main>
     </div>
   </div>
 </template>

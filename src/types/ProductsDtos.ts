@@ -2,21 +2,21 @@ export interface Product {
     id: string
     description: string
     isSupply: boolean
-    price: string
+    price: number
     measureUnit: string
 }
 
 export interface CreateProduct{
     description: string
     isSupply: boolean
-    price: string
+    price: number
     measureUnit: string
 }
 
 export interface UpdateProduct{
     description: string
     isSupply: boolean
-    price: string
+    price: Number
     measureUnit: string
 }
 
