@@ -13,6 +13,7 @@ import ProductsModals from '@/components/modals/ProductsModals.vue'
 
 import type { Product, CreateProduct, UpdateProduct, Products } from '@/types/ProductsDtos'
 import { deleteProduct, getProducts, postProduct, putProduct } from '@/service/ProductsService'
+import axios from 'axios'
 
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
@@ -78,15 +79,19 @@ const insertRow = async (description: string, isSupply: boolean, price: number, 
 
   try {
     const response = await postProduct(product)
+    modalInsertEnable.value = false
+    mostrarToast('Producto agregado correctamente.','exito')
     console.log(response)
+    await loadProducts()
   } catch (err) {
     console.error("No se pudo crear el producto:", err)
+    mostrarToast(obtenerMensajeError(err,'No se pudo crear el platillo.'),'error')
   }
 }
 
 const loadRowInformation = (row: CatalogRow) => {
   currentRow.value = {
-    id: String(row.id),
+    id: Number(row.id),
     description: String(row.description),
     isSupply: Boolean(row.isSupply),
     price: Number(row.price),
@@ -114,9 +119,11 @@ const updateRow = async (description: string, isSupply: boolean, price: number, 
   }
   console.log("update call")
   try {
-    const response = await putProduct(currentRow.value?.id as string, product)
+    const response = await putProduct(currentRow.value?.id as number, product)
+    modalUpdateEnable.value = false
+    mostrarToast('Producto agregado correctamente.','exito')
     console.log(response)
-    window.location.reload()
+    
   } catch (err) {
     console.error("No se pudo actualizar el producto:", err)
   }
@@ -124,7 +131,7 @@ const updateRow = async (description: string, isSupply: boolean, price: number, 
 
 const deleteRow = async () => {
   try {
-    const response = await deleteProduct(currentRow.value?.id as string)
+    const response = await deleteProduct(currentRow.value?.id as number)
     console.log(response)
     window.location.reload()
   } catch (err) {
@@ -136,7 +143,7 @@ const exportTable = () => {
   
 }
 
-const cargarProductos = async () => {
+const loadProducts = async () => {
   try{
     products.value = await getProducts();
     pagina.value = products.value.page
@@ -148,7 +155,17 @@ const cargarProductos = async () => {
   }
 }
 
-onMounted(cargarProductos)
+const obtenerMensajeError=(err:unknown,mensajeDefault:string)=>{
+    if(axios.isAxiosError(err)){
+        const mensaje=err.response?.data?.message
+        if(typeof mensaje==='string'&&mensaje.trim()!==''){
+            return mensaje
+        }
+    }
+    return mensajeDefault
+}
+
+onMounted(loadProducts)
 
 </script>
 
@@ -189,7 +206,7 @@ onMounted(cargarProductos)
         />
 
         <ProductsModals
-          v-if="modalInsertEnable === true"
+          v-if="modalInsertEnable"
           :is-insert="true"
           :modal-title="'Crear producto'"
           :modal-subtitle="'Ingrese los datos del producto'"
@@ -198,7 +215,7 @@ onMounted(cargarProductos)
         />
 
         <ProductsModals
-          v-if="modalUpdateEnable === true"
+          v-if="modalUpdateEnable"
           :modal-title="'Modificar producto'"
           :modal-subtitle="'cambie los datos del producto'"
           @close="modalUpdateEnable = false"

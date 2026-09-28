@@ -35,8 +35,8 @@ const price=ref<number|null>(props.dish?.price??null)
 const recipe=ref<Recipe[]>(props.dish?.recipe?[...props.dish.recipe]:[])
 const productoSeleccionado=ref<Product|null>(null)
 const products=ref<Product[]>([])
-const productoBusqueda=ref('')
-const cantidad=ref<number|null>(null)
+const productSearch=ref('')
+const quantity=ref<number|null>(null)
 
 const reason = ref('')
 const recipeEnable = ref(false)
@@ -50,12 +50,12 @@ const validate = computed(() => {
   )
 })
 
-const productosFiltrados=computed(()=>{
-    const texto=productoBusqueda.value.trim().toLowerCase()
+const filterProducts = computed ( ()=> {
+    const texto=productSearch.value.trim().toLowerCase()
     if(!texto)return[]
-    return products.value.filter(product=>product.description.toLowerCase().includes(texto))
+    return products.value.filter(product => product.description.toLowerCase().includes(texto))
 })
-const cargarProductos=async()=>{
+const loadProducts=async()=>{
     try{
         const response=await getProducts()
         products.value=response.items
@@ -63,32 +63,32 @@ const cargarProductos=async()=>{
         console.error('No se pudieron cargar los productos:',err)
     }
 }
-const seleccionarProducto=(product:Product)=>{
+const selectProduct=(product:Product)=>{
     productoSeleccionado.value=product
-    productoBusqueda.value=product.description
+    productSearch.value=product.description
 }
-const agregarProducto=()=>{
+const addProducts=()=>{
     if(!productoSeleccionado.value)return
-    if(cantidad.value===null||cantidad.value<=0)return
+    if(quantity.value===null||quantity.value<=0)return
     const productoExistente=recipe.value.find(item=>item.product.id===productoSeleccionado.value!.id)
     if(productoExistente){
-        productoExistente.quantity=cantidad.value
+        productoExistente.quantity=quantity.value
     }else{
         recipe.value.push({
             product:productoSeleccionado.value,
-            quantity:cantidad.value
+            quantity:quantity.value
         })
     }
-    productoBusqueda.value=''
+    productSearch.value=''
     productoSeleccionado.value=null
-    cantidad.value=null
+    quantity.value=null
 }
 
-const eliminarProducto=(productId:number)=>{
-    recipe.value=recipe.value.filter(item=>item.product.id!==productId)
+const deleteProducts=(productId:number)=>{
+    recipe.value = recipe.value.filter(item => item.product.id !== productId)
 }
 
-const guardar=()=>{
+const save=()=>{
     if(price.value===null)return
     const recipeRequest=recipe.value.map(item=>({
         productId:item.product.id,
@@ -106,7 +106,8 @@ const confirmDelete = () => {
   reasonModalEnable.value = false
   emit('delete', reason.value)
 }
-onMounted(cargarProductos)
+
+onMounted(loadProducts)
 
 </script>
 
@@ -231,7 +232,7 @@ onMounted(cargarProductos)
                  disabled:text-neutral-500
                  disabled:cursor-not-allowed
                  disabled:shadow-none"
-          @click="guardar"
+          @click="save"
           >
           Guardar
         </button>
@@ -262,7 +263,10 @@ onMounted(cargarProductos)
                               <td class="px-4 py-3 text-center">{{item.quantity}}</td>
                               <td class="px-4 py-3">{{item.product.measureUnit}}</td>
                               <td class="px-4 py-3 text-center">
-                                  <button type="button" class="text-red-500 hover:text-red-700" @click="eliminarProducto(item.product.id)">
+                                  <button 
+                                    type="button" 
+                                    class="text-red-500 hover:text-red-700" 
+                                    @click="deleteProducts(item.product.id)">
                                       <Trash2 :size="18"/>
                                   </button>
                               </td>
@@ -279,14 +283,30 @@ onMounted(cargarProductos)
           <div class="space-y-3">
               <div class="flex gap-3">
                   <div class="flex-1 relative">
-                      <input v-model="productoBusqueda" type="text" placeholder="Buscar producto..." class="w-full px-4 py-3 border rounded-xl"/>
-                      <div v-if="productosFiltrados.length>0" class="absolute z-20 w-full bottom-full mb-1 bg-white border rounded-xl shadow-lg max-h-40 overflow-y-auto">
-                          <button v-for="product in productosFiltrados" :key="product.id" type="button" class="w-full text-left px-4 py-2 hover:bg-neutral-100" @click="seleccionarProducto(product)">{{product.description}}</button>
+                      <input 
+                        v-model="productSearch" 
+                        type="text" placeholder="Buscar producto..." 
+                        class="w-full px-4 py-3 border rounded-xl"/>
+                      <div v-if="filterProducts.length>0" class="absolute z-20 w-full bottom-full mb-1 bg-white border rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                          <button 
+                            v-for="product in filterProducts" 
+                            :key="product.id" 
+                            type="button" 
+                            class="w-full text-left px-4 py-2 hover:bg-neutral-100" 
+                            @click="selectProduct(product)">
+                            {{product.description}}
+                          </button>
                       </div>
                   </div>
-                  <input v-model="cantidad" type="number" min="1" step="1" placeholder="Cantidad" class="w-32 px-4 py-3 border rounded-xl"/>
+                  <input v-model="quantity" type="number" min="1" step="1" placeholder="Cantidad" class="w-32 px-4 py-3 border rounded-xl"/>
               </div>
-              <button type="button" class="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed" :disabled="!productoSeleccionado||cantidad===null||cantidad<=0" @click="agregarProducto">Agregar producto</button>
+              <button 
+                type="button" 
+                class="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed" 
+                :disabled="!productoSeleccionado||quantity===null||quantity<=0" 
+                @click="addProducts">
+                Agregar producto
+              </button>
           </div>
       </div>
     </div>

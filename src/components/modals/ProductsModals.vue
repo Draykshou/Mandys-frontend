@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { DollarSign } from 'lucide-vue-next';
-import { OctagonAlert } from 'lucide-vue-next';
+import DeleteModal from '@/components/DeleteModal.vue'
+import { DollarSign,  OctagonAlert } from 'lucide-vue-next';
 
 const emit = defineEmits<{
   close: []
   insert: [string, boolean, number, string]
   update: [string, boolean, number, string]
-  delete: []
+  delete: [string]
 }>()
 
 const props = withDefaults(  
@@ -38,6 +38,9 @@ const price = ref<number | null>(props.price ?? null)
 const measureUnit = ref(props.measureUnit ?? '')
 const salePrice = ref(props.salePrice ?? '')
 
+const reason = ref('')
+const reasonModalEnable = ref(false)
+
 const validate = computed(() => {
   return (
     description.value.trim() !== '' &&
@@ -57,6 +60,12 @@ watch(isSupply, (newValue) => {
     salePrice.value = ""
   }
 })
+
+const confirmDelete = () => {
+  console.log('Motivo de eliminación:', reason.value)
+  reasonModalEnable.value = false
+  emit('delete', reason.value)
+}
 
 </script>
 
@@ -208,7 +217,7 @@ watch(isSupply, (newValue) => {
       <!-- Modal de eliminar -->
 
       <div
-      v-if="isDelete"
+      v-if="isDelete && !reasonModalEnable"
       class="w-full max-w-120 flex flex-col rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden m-8"
       >
         <div class="bg-red-500 text-neutral-50 text-2xl text-center font-bold p-2">
@@ -231,12 +240,17 @@ watch(isSupply, (newValue) => {
           </button>
           <button 
             class="bg-red-500 hover:bg-red-600 border hover:border-secondary-600 active:bg-red-700 hover border-neutral-200 text-neutral-50 py-3 px-7 rounded-xl shadow-xl"
-            @click="emit('delete')"
+            @click="reasonModalEnable = true"
             >
             Confirmar
           </button>
         </div>
-
       </div>
+
+      <DeleteModal
+        :visible="reasonModalEnable"
+        @cancelar="emit('close')"
+        @confirmar="confirmDelete"
+      />
     </div>
 </template>

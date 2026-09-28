@@ -8,12 +8,15 @@ import AppToast from '@/components/AppToast.vue'
 import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
+import DishesModals from '@/components/modals/DishesModals.vue'
 import { useToast } from '@/composables/useToast'
+
 import type { ToastTipo } from '@/types/Toast'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
-import DishesModals from '@/components/modals/DishesModals.vue'
-import { CheckCircle, Trash2, AlertCircle } from 'lucide-vue-next'
 import type { CreateDish, Dish, Dishes, UpdateDish } from '@/types/DishesDtos'
+
+import { CheckCircle, Trash2, AlertCircle } from 'lucide-vue-next'
+
 import { postDish, putDish, deleteDish, getDishes } from '@/service/DishesService'
 
 
@@ -60,8 +63,8 @@ const DishesColumn: CatalogoDef = {
   ],
 }
 
-const pagina = ref(1)
-const totalPaginas = ref(1)
+const page = ref(1)
+const totalPages = ref(1)
 
 // Filtro
 const filtro = reactive({
@@ -70,37 +73,37 @@ const filtro = reactive({
 })
 
 
-function limpiarFiltro() {
+function cleanFilter() {
   filtro.busqueda = ''
   filtro.categoria = DishesColumn.categorias[0]
 }
 
-function buscar() {
+function search() {
  
 }
 
 // CUD
 const modalInsertEnable = ref(false)
-
-const currentRow = ref<Dish | null>(null)
 const modalUpdateEnable = ref(false)
 const modalDeleteEnable = ref(false)
 
+const currentRow = ref<Dish | null>(null)
+
 const insertRow = async(name: string, price: number, recipe: CreateDish['recipe'])=>{
-    const dish:CreateDish={
-        name,
-        price,
-        recipe
-    }
-    try{
-        await postDish(dish)
-        modalInsertEnable.value = false
-        mostrarToast('Platillo creado correctamente.','exito')
-        await cargarDishes()
-    }catch(err){
-        console.error('No se pudo crear el platillo:', err)
-        mostrarToast(obtenerMensajeError(err,'No se pudo crear el platillo.'),'error')
-    }
+  const dish:CreateDish={
+      name,
+      price,
+      recipe
+  }
+  try{
+      await postDish(dish)
+      modalInsertEnable.value = false
+      mostrarToast('Platillo creado correctamente.','exito')
+      await loadDishes()
+  }catch(err){
+      console.error('No se pudo crear el platillo:', err)
+      mostrarToast(obtenerMensajeError(err,'No se pudo crear el platillo.'),'error')
+  }
 }
 
 const loadRowInformation=(row:CatalogRow)=>{
@@ -134,7 +137,7 @@ const updateRow = async(name: string, price: number, recipe: UpdateDish['recipe'
         await putDish(currentRow.value.id,dish)
         modalUpdateEnable.value = false
         mostrarToast('Platillo actualizado correctamente.','exito')
-        await cargarDishes()
+        await loadDishes()
     }catch(err){
         console.error('No se pudo actualizar el platillo:',err)
         mostrarToast(obtenerMensajeError(err,'No se pudo actualizar el platillo.'),'error')
@@ -148,7 +151,7 @@ const deleteRow = async (reason: string) => {
         await deleteDish(currentRow.value.id)
         modalDeleteEnable.value=false
         mostrarToast('Platillo eliminado correctamente.','exito')
-        await cargarDishes()
+        await loadDishes()
     }catch(err){
         console.error('No se pudo eliminar el platillo:',err)
         mostrarToast(obtenerMensajeError(err,'No se pudo eliminar el platillo.'),'error')
@@ -159,11 +162,11 @@ const exportTable = () => {
   
 }
 
-const cargarDishes = async () => {
+const loadDishes = async () => {
   try{
     dishes.value = await getDishes();
-    pagina.value = dishes.value.page
-    totalPaginas.value = dishes.value.totalPage
+    page.value = dishes.value.page
+    totalPages.value = dishes.value.totalPage
     console.log(dishes.value)
   }
   catch(err){
@@ -181,7 +184,7 @@ const obtenerMensajeError=(err:unknown,mensajeDefault:string)=>{
     return mensajeDefault
 }
 
-onMounted(cargarDishes)
+onMounted(loadDishes)
 
 </script>
 
@@ -204,8 +207,8 @@ onMounted(cargarDishes)
           v-model:busqueda="filtro.busqueda"
           v-model:categoria="filtro.categoria"
           :categorias="DishesColumn.categorias"
-          @buscar="buscar"
-          @limpiar="limpiarFiltro"
+          @buscar="search"
+          @limpiar="cleanFilter"
         />
 
         <CatalogTable
@@ -213,12 +216,12 @@ onMounted(cargarDishes)
           :columns="DishesColumn.columns"
           :rows="dishes?.items ?? []"
           :total-registros="dishes?.totalCount ?? 0"
-          :pagina="pagina"
-          :total-paginas="totalPaginas"
+          :pagina="page"
+          :total-paginas="totalPages"
           @editar="openModalUpdate"
           @eliminar="openModalDelete"
           @exportar="exportTable"
-          @cambiar-pagina="(p) => (pagina = p)"
+          @cambiar-pagina="(p) => (page = p)"
         />
 
         <dishesModals

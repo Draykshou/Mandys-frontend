@@ -1,40 +1,41 @@
+import type { Dish } from '@/types/DishesDtos'
+import type { Product } from '@/types/ProductsDtos'
+
 export interface Combo {
-    id: string
+    id: number
     name: string
-    price: boolean
-    Dishes: Dishes
+    price: number
+    dishes: Dish[]
+    products: Product[]
 }
 
-export interface Dishes {
-    id: string
+export interface CreateCombo {
     name: string
-    price: boolean
-    recipe: Recipe
-    quantity: number
+    price: number
+    dishes: {
+        dishId: number
+        quantity: number
+    }[]
+    products: {
+        productId: number
+        quantity: number
+    }[]
 }
 
-export interface Recipe {
-    id: string
-    description: string
-    isSupply: boolean
-    price: string
-    measureUnit: string
-    quantity: number
-}
-
-export interface CreateCombo{
+export interface UpdateCombo {
     name: string
-    price: boolean
-    Dishes: Dishes
+    price: number
+    dishes: {
+        dishId: number
+        quantity: number
+    }[]
+    products: {
+        productId: number
+        quantity: number
+    }[]
 }
 
-export interface UpdateCombo{
-    name: string
-    price: boolean
-    Dishes: Dishes
-}
-
-export interface Combos{
+export interface Combos {
     totalCount: number
     page: number
     pageSize: number

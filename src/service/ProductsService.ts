@@ -11,11 +11,11 @@ export async function postProduct(payload: CreateProduct): Promise<Product> {
     return response.data
 }
 
-export async function putProduct(id: string, payload: UpdateProduct): Promise<Product> {
+export async function putProduct(id: number, payload: UpdateProduct): Promise<Product> {
     const response = await api.put<Product>(`/products/${id}`, payload)
     return response.data
 }
 
-export async function deleteProduct(id: string): Promise<void> {
+export async function deleteProduct(id: number): Promise<void> {
     await api.delete(`/products/${id}`)
 }
