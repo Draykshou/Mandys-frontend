@@ -1,5 +1,5 @@
 
-export type CatalogColumnType = 'text' | 'boolean' | 'button'
+export type CatalogColumnType = 'text' | 'currency' | 'boolean' | 'button'
 
 export interface CatalogColumn {
   key: string

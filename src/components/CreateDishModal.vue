@@ -1,14 +1,27 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { createDish } from '@/service/DishesService'
 import { getProducts } from '@/service/ProductsService'
 import type { Product } from '@/types/ProductsDtos'
+import type { CreateDish, UpdateDish, Dish } from '@/types/DishesDtos'
 import { X, Plus, Trash2, BookOpen, AlertCircle, CheckCircle, Info, ChefHat, DollarSign, Loader2 } from 'lucide-vue-next'
+import type { CatalogRow} from '@/types/CatalogColumns/catalog'
 
 const emit = defineEmits<{
-  (e: 'close'): void
-  (e: 'saved'): void
+  close: []
+  insert: [CreateDish]
+  update: [CatalogRow, UpdateDish]
 }>()
+
+const props = withDefaults(
+  defineProps<{
+    isInsert: boolean
+    titulo: string
+    subtitulo: string
+  }>(),
+  {
+
+  },
+)
 
 const name = ref('')
 const price = ref<number | null>(null)
@@ -94,24 +107,14 @@ const handleSave = async () => {
   successMsg.value = ''
   saving.value = true
 
-  const payload = {
+  const dish: CreateDish = {
     name: name.value.trim(),
     price: Number(price.value),
     recipe: recipe.value
       .filter(r => r.productId && Number(r.quantity) > 0)
       .map(r => ({ productId: Number(r.productId), quantity: Number(r.quantity) })),
   }
-
-  try {
-    await createDish(payload)
-    successMsg.value = '¡Platillo guardado exitosamente!'
-    setTimeout(() => { emit('saved'); emit('close') }, 1800)
-  } catch (err: any) {
-    const serverMsg = err?.response?.data?.message
-    errorMsg.value = serverMsg ? `Error: ${serverMsg}` : 'Error al guardar el platillo. Intenta de nuevo.'
-  } finally {
-    saving.value = false
-  }
+  emit('insert', dish)
 }
 
 const handleCancel = () => { if (!saving.value) emit('close') }
