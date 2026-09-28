@@ -1,5 +1,5 @@
 export interface Product {
-    id: string
+    id: number
     description: string
     isSupply: boolean
     price: number

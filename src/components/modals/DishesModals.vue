@@ -1,14 +1,17 @@
 <script setup lang="ts">
 
-import { ref, computed } from 'vue'
-
-import { DollarSign, OctagonAlert } from 'lucide-vue-next'
+import { ref,computed,onMounted } from 'vue'
+import { DollarSign,OctagonAlert,Trash2 } from 'lucide-vue-next'
+import type { Dish,Recipe,CreateDish,UpdateDish } from '@/types/DishesDtos'
+import type { Product } from '@/types/ProductsDtos'
+import { getProducts } from '@/service/ProductsService'
+import DeleteModal from '@/components/DeleteModal.vue'
 
 const emit = defineEmits<{
   close: []
-  insert: [string, number, ]
-  update: [string, number]
-  delete: []
+  insert: [string, number, CreateDish['recipe']]
+  update: [string, number, UpdateDish['recipe']]
+  delete: [string]
 }>()
 
 const props = withDefaults(
@@ -19,8 +22,7 @@ const props = withDefaults(
     modalTitle?: string
     modalSubtitle?: string
 
-    name?: string
-    price?: number
+    dish?:Dish
   }>(),
   {
     isInsert: false,
@@ -28,8 +30,17 @@ const props = withDefaults(
   }
 )
 
-const name = ref(props.name ?? '')
-const price = ref<number | null>(props.price ?? null)
+const name=ref(props.dish?.name??'')
+const price=ref<number|null>(props.dish?.price??null)
+const recipe=ref<Recipe[]>(props.dish?.recipe?[...props.dish.recipe]:[])
+const productoSeleccionado=ref<Product|null>(null)
+const products=ref<Product[]>([])
+const productoBusqueda=ref('')
+const cantidad=ref<number|null>(null)
+
+const reason = ref('')
+const recipeEnable = ref(false)
+const reasonModalEnable = ref(false)
 
 const validate = computed(() => {
   return (
@@ -38,6 +49,64 @@ const validate = computed(() => {
     price.value >= 0
   )
 })
+
+const productosFiltrados=computed(()=>{
+    const texto=productoBusqueda.value.trim().toLowerCase()
+    if(!texto)return[]
+    return products.value.filter(product=>product.description.toLowerCase().includes(texto))
+})
+const cargarProductos=async()=>{
+    try{
+        const response=await getProducts()
+        products.value=response.items
+    }catch(err){
+        console.error('No se pudieron cargar los productos:',err)
+    }
+}
+const seleccionarProducto=(product:Product)=>{
+    productoSeleccionado.value=product
+    productoBusqueda.value=product.description
+}
+const agregarProducto=()=>{
+    if(!productoSeleccionado.value)return
+    if(cantidad.value===null||cantidad.value<=0)return
+    const productoExistente=recipe.value.find(item=>item.product.id===productoSeleccionado.value!.id)
+    if(productoExistente){
+        productoExistente.quantity=cantidad.value
+    }else{
+        recipe.value.push({
+            product:productoSeleccionado.value,
+            quantity:cantidad.value
+        })
+    }
+    productoBusqueda.value=''
+    productoSeleccionado.value=null
+    cantidad.value=null
+}
+
+const eliminarProducto=(productId:number)=>{
+    recipe.value=recipe.value.filter(item=>item.product.id!==productId)
+}
+
+const guardar=()=>{
+    if(price.value===null)return
+    const recipeRequest=recipe.value.map(item=>({
+        productId:item.product.id,
+        quantity:item.quantity
+    }))
+    if(props.isInsert){
+        emit('insert', name.value, price.value, recipeRequest)
+    }else{
+        emit('update', name.value, price.value, recipeRequest)
+    }
+}
+
+const confirmDelete = () => {
+  console.log('Motivo de eliminación:', reason.value)
+  reasonModalEnable.value = false
+  emit('delete', reason.value)
+}
+onMounted(cargarProductos)
 
 </script>
 
@@ -52,7 +121,7 @@ const validate = computed(() => {
 
     <!-- Modal de insertar / editar -->
     <div
-      v-if="!isDelete" class="flex flex-col rounded-2xl shadow-2xl w-full max-w-2xl bg-neutral-50 overflow-hidden" style="max-height: 92vh;">
+      v-if="!isDelete" class="flex flex-col rounded-2xl shadow-2xl w-full max-w-xl bg-neutral-50 overflow-hidden" style="max-height: 92vh;">
       <!-- Encabezado del modal-->
       <div class="border-b border-neutral-200 p-4">
         <h1 class="text-secondary-800 text-2xl font-bold">
@@ -121,29 +190,21 @@ const validate = computed(() => {
         </div>
 
         <!-- Receta -->
-        <div class="px-8 pt-4 pb-8">
-
-          <label
-            class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5"
-          >
+        <div class="px-8 pt-6 pb-8 flex flex-col items-center">
+          <label class="block text-xs text-center font-bold text-neutral-600 uppercase tracking-wider mb-1.5">Pulsa el boton para ver o editar la receta la receta</label>
+          <button
+          type="button"
+          class="bg-primary-600 hover:bg-primary-700
+                 active:bg-primary-800 text-neutral-50
+                 py-3 px-7 rounded-xl shadow-xl
+                 disabled:bg-neutral-300
+                 disabled:text-neutral-500
+                 disabled:cursor-not-allowed
+                 disabled:shadow-none"
+          @click="recipeEnable = !recipeEnable">
             Receta
-            <span class="text-red-500">*</span>
-          </label>
-
-          <!--
-            Aquí posteriormente irá el componente de tabla
-            para administrar la receta.
-          -->
-          <div
-            class="w-full min-h-32 border border-dashed border-neutral-300
-                   rounded-xl bg-neutral-100 flex items-center
-                   justify-center text-sm text-neutral-500"
-          >
-            Aquí irá la tabla de ingredientes de la receta
-          </div>
-
+          </button>
         </div>
-
       </div>
 
       <!-- Botones -->
@@ -170,20 +231,69 @@ const validate = computed(() => {
                  disabled:text-neutral-500
                  disabled:cursor-not-allowed
                  disabled:shadow-none"
-          @click="
-            isInsert
-              ? emit('insert', name, price as number)
-              : emit('update', name, price as number)
-          "
-        >
+          @click="guardar"
+          >
           Guardar
         </button>
       </div>
     </div>
 
+    <!-- Modal de tabla -->
+    <div v-if="recipeEnable" class="flex flex-col w-full h-full max-h-150 max-w-2xl rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden ml-8">
+      <div class="border-b border-neutral-200 p-4 shrink-0">
+          <h2 class="text-secondary-800 text-2xl font-bold">Receta</h2>
+          <p class="text-neutral-700">Productos utilizados en el platillo</p>
+      </div>
+      <div class="p-6 flex-1 min-h-0">
+          <div class="border border-neutral-200 rounded-xl overflow-hidden h-full">
+              <div class="h-full overflow-y-auto">
+                  <table class="w-full text-sm">
+                      <thead class="sticky top-0 bg-neutral-100">
+                          <tr>
+                              <th class="text-left px-4 py-3">Producto</th>
+                              <th class="text-center px-4 py-3">Cantidad</th>
+                              <th class="text-left px-4 py-3">Unidad de medida</th>
+                              <th class="w-16 px-4 py-3"></th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          <tr v-for="item in recipe" :key="item.product.id" class="border-t border-neutral-200">
+                              <td class="px-4 py-3">{{item.product.description}}</td>
+                              <td class="px-4 py-3 text-center">{{item.quantity}}</td>
+                              <td class="px-4 py-3">{{item.product.measureUnit}}</td>
+                              <td class="px-4 py-3 text-center">
+                                  <button type="button" class="text-red-500 hover:text-red-700" @click="eliminarProducto(item.product.id)">
+                                      <Trash2 :size="18"/>
+                                  </button>
+                              </td>
+                          </tr>
+                          <tr v-if="recipe.length===0">
+                              <td colspan="4" class="px-4 py-8 text-center text-neutral-500">No hay productos en la receta.</td>
+                          </tr>
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+      </div>
+      <div class="p-6 pt-0 shrink-0">
+          <div class="space-y-3">
+              <div class="flex gap-3">
+                  <div class="flex-1 relative">
+                      <input v-model="productoBusqueda" type="text" placeholder="Buscar producto..." class="w-full px-4 py-3 border rounded-xl"/>
+                      <div v-if="productosFiltrados.length>0" class="absolute z-20 w-full bottom-full mb-1 bg-white border rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                          <button v-for="product in productosFiltrados" :key="product.id" type="button" class="w-full text-left px-4 py-2 hover:bg-neutral-100" @click="seleccionarProducto(product)">{{product.description}}</button>
+                      </div>
+                  </div>
+                  <input v-model="cantidad" type="number" min="1" step="1" placeholder="Cantidad" class="w-32 px-4 py-3 border rounded-xl"/>
+              </div>
+              <button type="button" class="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed" :disabled="!productoSeleccionado||cantidad===null||cantidad<=0" @click="agregarProducto">Agregar producto</button>
+          </div>
+      </div>
+    </div>
+
     <!-- Modal de eliminar -->
     <div
-      v-if="isDelete"
+      v-if="isDelete && !reasonModalEnable"
       class="w-full max-w-120 flex flex-col rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden m-8"
     >
 
@@ -228,12 +338,17 @@ const validate = computed(() => {
                  active:bg-red-700 border-neutral-200
                  text-neutral-50 py-3 px-7
                  rounded-xl shadow-xl"
-          @click="emit('delete')"
+          @click="reasonModalEnable = true"
         >
           Confirmar
         </button>
       </div>
     </div>
+
+    <DeleteModal
+      :visible="reasonModalEnable"
+      @cancelar="emit('close')"
+      @confirmar="confirmDelete"
+    />
   </div>
 </template>
-```

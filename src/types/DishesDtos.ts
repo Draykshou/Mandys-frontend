@@ -1,35 +1,33 @@
+import type { Product } from "./ProductsDtos"
+
 export interface Dish {
-    id: string
+    id: number
     name: string
     price: number
-    recipe: Recipe
+    recipe: Recipe[]
 }
 
 export interface Recipe {
-    id: string
-    description: string
-    isSupply: boolean
-    price: number
-    measureUnit: string
+    product: Product
     quantity: number
 }
 
 export interface CreateDish{
     name: string
     price: number
-    recipe: [{
-      productId: number,
-      quantity: number
-    }]
+    recipe:{
+        productId:number
+        quantity:number
+    }[]
 }
 
 export interface UpdateDish{
     name: string
     price: number
-    recipe: [{
-      productId: number,
-      quantity: number
-    }]
+    recipe:{
+        productId:number
+        quantity:number
+    }[]
 }
 
 export interface Dishes{

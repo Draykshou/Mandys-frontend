@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted, type Component } from 'vue'
+import axios from 'axios'
 
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -8,14 +9,33 @@ import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import { useToast } from '@/composables/useToast'
+import type { ToastTipo } from '@/types/Toast'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
 import DishesModals from '@/components/modals/DishesModals.vue'
-
+import { CheckCircle, Trash2, AlertCircle } from 'lucide-vue-next'
 import type { CreateDish, Dish, Dishes, UpdateDish } from '@/types/DishesDtos'
 import { postDish, putDish, deleteDish, getDishes } from '@/service/DishesService'
-import type { Recipe } from '@/types/CombosDtos'
+
 
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
+
+const ESTILOS:Record<ToastTipo,{icono:Component;caja:string;barra:string}>={
+    exito:{
+        icono:CheckCircle,
+        caja:'border-green-200 bg-green-50 text-green-900',
+        barra:'bg-green-500',
+    },
+    eliminar:{
+        icono:Trash2,
+        caja:'border-red-200 bg-red-50 text-red-900',
+        barra:'bg-red-500',
+    },
+    error:{
+        icono:AlertCircle,
+        caja:'border-red-200 bg-red-50 text-red-900',
+        barra:'bg-red-500',
+    },
+}
 
 interface CatalogoDef {
   titulo: string
@@ -66,32 +86,30 @@ const currentRow = ref<Dish | null>(null)
 const modalUpdateEnable = ref(false)
 const modalDeleteEnable = ref(false)
 
-const insertRow = async (name: string, price: number) => {
-  const dish: CreateDish = {
-    name: name,
-    price: price,
-    recipe: [{
-      productId: 4,
-      quantity: 3
-    }]
-  }
-
-  try {
-    const response = await postDish(dish)
-    console.log(response)
-  } catch (err) {
-    console.error("No se pudo crear el disho:", err)
-  }
+const insertRow = async(name: string, price: number, recipe: CreateDish['recipe'])=>{
+    const dish:CreateDish={
+        name,
+        price,
+        recipe
+    }
+    try{
+        await postDish(dish)
+        modalInsertEnable.value = false
+        mostrarToast('Platillo creado correctamente.','exito')
+        await cargarDishes()
+    }catch(err){
+        console.error('No se pudo crear el platillo:', err)
+        mostrarToast(obtenerMensajeError(err,'No se pudo crear el platillo.'),'error')
+    }
 }
 
-const loadRowInformation = (row: CatalogRow) => {
-  currentRow.value = {
-    id: String(row.id),
-    name: String(row.name),
-    price: Number(row.price),
-    recipe: row.recipe as Dish['recipe']
-
-  }
+const loadRowInformation=(row:CatalogRow)=>{
+    currentRow.value={
+        id: Number(row.id),
+        name: String(row.name),
+        price: Number(row.price),
+        recipe: row.recipe as Dish['recipe']
+    }
 }
 
 const openModalUpdate = (row: CatalogRow) => {
@@ -105,43 +123,43 @@ const openModalDelete = (row: CatalogRow) => {
 }
 
 
-const updateRow = async (name: string, price: number) => {
-   if (!currentRow.value) {
-    return
-  }
-  const dish: UpdateDish = {
-    name: name,
-    price: price,
-    recipe: [{
-      productId: 4,
-      quantity: 3
-    }]
-  }
-  console.log("update call", dish)
-  try {
-    const response = await putDish(currentRow.value?.id as string, dish)
-    console.log(response)
-    window.location.reload()
-  } catch (err) {
-    console.error("No se pudo actualizar el disho:", err)
-  }
+const updateRow = async(name: string, price: number, recipe: UpdateDish['recipe'])=>{
+    if(!currentRow.value)return
+    const dish:UpdateDish={
+        name,
+        price,
+        recipe
+    }
+    try{
+        await putDish(currentRow.value.id,dish)
+        modalUpdateEnable.value = false
+        mostrarToast('Platillo actualizado correctamente.','exito')
+        await cargarDishes()
+    }catch(err){
+        console.error('No se pudo actualizar el platillo:',err)
+        mostrarToast(obtenerMensajeError(err,'No se pudo actualizar el platillo.'),'error')
+    }
 }
 
-const deleteRow = async () => {
-  try {
-    const response = await deleteDish(currentRow.value?.id as string)
-    console.log(response)
-    window.location.reload()
-  } catch (err) {
-    console.error("No se pudo crear el disho:", err)
-  }
+const deleteRow = async (reason: string) => {
+    if(!currentRow.value) return
+    console.log('Motivo de eliminación:', reason)
+    try{
+        await deleteDish(currentRow.value.id)
+        modalDeleteEnable.value=false
+        mostrarToast('Platillo eliminado correctamente.','exito')
+        await cargarDishes()
+    }catch(err){
+        console.error('No se pudo eliminar el platillo:',err)
+        mostrarToast(obtenerMensajeError(err,'No se pudo eliminar el platillo.'),'error')
+    }
 }
 
 const exportTable = () => {
   
 }
 
-const cargarProductos = async () => {
+const cargarDishes = async () => {
   try{
     dishes.value = await getDishes();
     pagina.value = dishes.value.page
@@ -153,7 +171,17 @@ const cargarProductos = async () => {
   }
 }
 
-onMounted(cargarProductos)
+const obtenerMensajeError=(err:unknown,mensajeDefault:string)=>{
+    if(axios.isAxiosError(err)){
+        const mensaje=err.response?.data?.message
+        if(typeof mensaje==='string'&&mensaje.trim()!==''){
+            return mensaje
+        }
+    }
+    return mensajeDefault
+}
+
+onMounted(cargarDishes)
 
 </script>
 
@@ -194,7 +222,7 @@ onMounted(cargarProductos)
         />
 
         <dishesModals
-          v-if="modalInsertEnable === true"
+          v-if="modalInsertEnable"
           :is-insert="true"
           :modal-title="'Crear Platillo'"
           :modal-subtitle="'Ingrese los datos del platillo'"
@@ -203,21 +231,20 @@ onMounted(cargarProductos)
         />
 
         <dishesModals
-          v-if="modalUpdateEnable === true"
+          v-if="modalUpdateEnable"
           :modal-title="'Modificar Platillo'"
           :modal-subtitle="'cambie los datos del platillo'"
           @close="modalUpdateEnable = false"
           @update="updateRow"
-          :name="currentRow?.name ?? ''"
-          :price="currentRow?.price ?? 0"
+          :dish="currentRow ?? undefined"
         />
 
         <dishesModals
-          v-if="modalDeleteEnable === true"
+          v-if="modalDeleteEnable"
           :is-delete="true"
           @close="modalDeleteEnable = false"
           @delete="deleteRow"
-          :name="currentRow?.name ?? ''"
+          :dish="currentRow ?? undefined"
         />
 
         <AppToast
