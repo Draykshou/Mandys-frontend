@@ -1,7 +1,7 @@
 export interface Dish {
     id: string
     name: string
-    price: boolean
+    price: number
     recipe: Recipe
 }
 
@@ -9,24 +9,27 @@ export interface Recipe {
     id: string
     description: string
     isSupply: boolean
-    price: string
+    price: number
     measureUnit: string
     quantity: number
 }
 
 export interface CreateDish{
     name: string
-    price: Number
-    recipe: {
-        productId: number
-        quantity: number
-    }[]
+    price: number
+    recipe: [{
+      productId: number,
+      quantity: number
+    }]
 }
 
 export interface UpdateDish{
     name: string
-    price: boolean
-    recipe: Recipe
+    price: number
+    recipe: [{
+      productId: number,
+      quantity: number
+    }]
 }
 
 export interface Dishes{

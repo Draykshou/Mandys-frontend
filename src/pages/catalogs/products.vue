@@ -9,10 +9,10 @@ import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import { useToast } from '@/composables/useToast'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
-import ActionModal from '@/components/ActionModal.vue'
+import ProductsModals from '@/components/modals/ProductsModals.vue'
 
 import type { Product, CreateProduct, UpdateProduct, Products } from '@/types/ProductsDtos'
-import { getProducts, postProduct, putProduct } from '@/service/ProductsService'
+import { deleteProduct, getProducts, postProduct, putProduct } from '@/service/ProductsService'
 
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
@@ -64,6 +64,8 @@ const modalInsertEnable = ref(false)
 const modalUpdateEnable = ref(false)
 const currentRow = ref<Product | null>(null)
 
+const modalDeleteEnable = ref(false)
+
 // CUD
 const insertRow = async (description: string, isSupply: boolean, price: number, measureUnit: string) => {
   const product : CreateProduct = {
@@ -82,7 +84,7 @@ const insertRow = async (description: string, isSupply: boolean, price: number, 
   }
 }
 
-const loadUpdateRowInformation = (row: CatalogRow) => {
+const loadRowInformation = (row: CatalogRow) => {
   currentRow.value = {
     id: String(row.id),
     description: String(row.description),
@@ -90,8 +92,18 @@ const loadUpdateRowInformation = (row: CatalogRow) => {
     price: Number(row.price),
     measureUnit: String(row.measureUnit),
   }
+}
+
+const openModalUpdate = (row: CatalogRow) => {
+  loadRowInformation(row)
   modalUpdateEnable.value = true
 }
+
+const openModalDelete = (row: CatalogRow) => {
+  loadRowInformation(row)
+  modalDeleteEnable.value = true
+}
+
 
 const updateRow = async (description: string, isSupply: boolean, price: number, measureUnit: string) => {
   const product : UpdateProduct = {
@@ -106,12 +118,18 @@ const updateRow = async (description: string, isSupply: boolean, price: number, 
     console.log(response)
     window.location.reload()
   } catch (err) {
-    console.error("No se pudo crear el producto:", err)
+    console.error("No se pudo actualizar el producto:", err)
   }
 }
 
-const deleteRow = (row: CatalogRow) => {
-  
+const deleteRow = async () => {
+  try {
+    const response = await deleteProduct(currentRow.value?.id as string)
+    console.log(response)
+    window.location.reload()
+  } catch (err) {
+    console.error("No se pudo crear el producto:", err)
+  }
 }
 
 const exportTable = () => {
@@ -164,13 +182,13 @@ onMounted(cargarProductos)
           :total-registros="products?.totalCount ?? 0"
           :pagina="pagina"
           :total-paginas="totalPaginas"
-          @editar="loadUpdateRowInformation"
-          @eliminar="deleteRow"
+          @editar="openModalUpdate"
+          @eliminar="openModalDelete"
           @exportar="exportTable"
           @cambiar-pagina="(p) => (pagina = p)"
         />
 
-        <ActionModal
+        <ProductsModals
           v-if="modalInsertEnable === true"
           :is-insert="true"
           :modal-title="'Crear producto'"
@@ -179,7 +197,7 @@ onMounted(cargarProductos)
           @insert="insertRow"
         />
 
-        <ActionModal
+        <ProductsModals
           v-if="modalUpdateEnable === true"
           :modal-title="'Modificar producto'"
           :modal-subtitle="'cambie los datos del producto'"
@@ -189,6 +207,14 @@ onMounted(cargarProductos)
           :is-supply="currentRow?.isSupply"
           :price="currentRow?.price"
           :measure-unit="currentRow?.measureUnit"
+        />
+
+        <ProductsModals
+          v-if="modalDeleteEnable === true"
+          :is-delete="true"
+          @close="modalDeleteEnable = false"
+          @delete="deleteRow"
+          :description="currentRow?.description"
         />
 
         <AppToast

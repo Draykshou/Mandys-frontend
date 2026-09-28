@@ -7,22 +7,15 @@ import AppToast from '@/components/AppToast.vue'
 import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
-import DeleteModal from '@/components/DeleteModal.vue'
-import DishFormModal from '@/components/DishFormModal.vue'
 import { useToast } from '@/composables/useToast'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
+import DishesModals from '@/components/modals/DishesModals.vue'
 
-import type { Dish, Dishes } from '@/types/DishesDtos'
-import { deleteDish, getDishes } from '@/service/DishesService'
-import { mensajeDeError } from '@/utils/apiError'
+import type { CreateDish, Dish, Dishes, UpdateDish } from '@/types/DishesDtos'
+import { postDish, putDish, deleteDish, getDishes } from '@/service/DishesService'
+import type { Recipe } from '@/types/CombosDtos'
 
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
-
-const mostrarFormModal = ref(false)
-const dishEnEdicion = ref<Dish | null>(null)
-
-const mostrarEliminar = ref(false)
-const dishAEliminar = ref<Dish | null>(null)
 
 interface CatalogoDef {
   titulo: string
@@ -32,7 +25,7 @@ interface CatalogoDef {
   columns: CatalogColumn[]
 }
 
-const Dishes = ref<Dishes | null>(null)
+const dishes = ref<Dishes | null>(null)
 
 const DishesColumn: CatalogoDef = {
   titulo: 'Platillos',
@@ -62,78 +55,106 @@ function limpiarFiltro() {
   filtro.categoria = DishesColumn.categorias[0]
 }
 
-// Botones
 function buscar() {
  
 }
 
-function abrirNuevoPlatillo() {
-  dishEnEdicion.value = null
-  mostrarFormModal.value = true
-}
+// CUD
+const modalInsertEnable = ref(false)
 
-/** CatalogTable es genérico y entrega CatalogRow; en esta página siempre es un Dish. */
-const aDish = (row: CatalogRow) => row as unknown as Dish
+const currentRow = ref<Dish | null>(null)
+const modalUpdateEnable = ref(false)
+const modalDeleteEnable = ref(false)
 
-function editarFila(row: CatalogRow) {
-  dishEnEdicion.value = aDish(row)
-  mostrarFormModal.value = true
-}
-
-function platilloGuardado() {
-  const dish = dishEnEdicion.value
-  cargarPlatillos()
-  mostrarToast(
-    dish ? `"${dish.name}" se actualizó` : 'Platillo agregado',
-  )
-}
-
-function cerrarFormModal() {
-  mostrarFormModal.value = false
-  dishEnEdicion.value = null
-}
-
-function deleteRow(row: CatalogRow) {
-  dishAEliminar.value = aDish(row)
-  mostrarEliminar.value = true
-}
-
-async function confirmarEliminar() {
-  const dish = dishAEliminar.value
-  if (!dish) return
-
-  mostrarEliminar.value = false
-  dishAEliminar.value = null
-
-  try {
-    await deleteDish(String(dish.id))
-    mostrarToast(`"${dish.name}" se eliminó correctamente`, 'eliminar')
-  } catch (err) {
-    mostrarToast(mensajeDeError(err, 'No se pudo eliminar el platillo'), 'error')
+const insertRow = async (name: string, price: number) => {
+  const dish: CreateDish = {
+    name: name,
+    price: price,
+    recipe: [{
+      productId: 4,
+      quantity: 3
+    }]
   }
 
-  await cargarPlatillos()
-}
-
-function handleAction(payload: { columnKey: string; row: CatalogRow }) {
-  console.log('Acción', payload.columnKey, payload.row)
-}
-
-function exportar() {
-
-}
-
-const cargarPlatillos = async () => {
   try {
-    Dishes.value = await getDishes()
-    pagina.value = Dishes.value.page
-    totalPaginas.value = Dishes.value.totalPage
+    const response = await postDish(dish)
+    console.log(response)
   } catch (err) {
-    console.error('Error al cargar platillos:', err)
+    console.error("No se pudo crear el disho:", err)
   }
 }
 
-onMounted(cargarPlatillos)
+const loadRowInformation = (row: CatalogRow) => {
+  currentRow.value = {
+    id: String(row.id),
+    name: String(row.name),
+    price: Number(row.price),
+    recipe: row.recipe as Dish['recipe']
+
+  }
+}
+
+const openModalUpdate = (row: CatalogRow) => {
+  loadRowInformation(row)
+  modalUpdateEnable.value = true
+}
+
+const openModalDelete = (row: CatalogRow) => {
+  loadRowInformation(row)
+  modalDeleteEnable.value = true
+}
+
+
+const updateRow = async (name: string, price: number) => {
+   if (!currentRow.value) {
+    return
+  }
+  const dish: UpdateDish = {
+    name: name,
+    price: price,
+    recipe: [{
+      productId: 4,
+      quantity: 3
+    }]
+  }
+  console.log("update call", dish)
+  try {
+    const response = await putDish(currentRow.value?.id as string, dish)
+    console.log(response)
+    window.location.reload()
+  } catch (err) {
+    console.error("No se pudo actualizar el disho:", err)
+  }
+}
+
+const deleteRow = async () => {
+  try {
+    const response = await deleteDish(currentRow.value?.id as string)
+    console.log(response)
+    window.location.reload()
+  } catch (err) {
+    console.error("No se pudo crear el disho:", err)
+  }
+}
+
+const exportTable = () => {
+  
+}
+
+const cargarProductos = async () => {
+  try{
+    dishes.value = await getDishes();
+    pagina.value = dishes.value.page
+    totalPaginas.value = dishes.value.totalPage
+    console.log(dishes.value)
+  }
+  catch(err){
+    console.error('No se pudieron cargar los dishos:', err)
+  }
+}
+
+onMounted(cargarProductos)
+
 </script>
 
 <template>
@@ -148,21 +169,7 @@ onMounted(cargarPlatillos)
           :titulo="DishesColumn.titulo"
           :subtitulo="DishesColumn.subtitulo"
           :texto-boton="DishesColumn.textoBoton"
-          @agregar="abrirNuevoPlatillo"
-        />
-
-        <DishFormModal
-          :open="mostrarFormModal"
-          :dish="dishEnEdicion"
-          @close="cerrarFormModal"
-          @saved="platilloGuardado"
-        />
-
-        <DeleteModal
-          :visible="mostrarEliminar"
-          :row="dishAEliminar"
-          @cancelar="mostrarEliminar = false"
-          @confirmar="confirmarEliminar"
+          @agregar="modalInsertEnable = true"
         />
 
         <CatalogFilter
@@ -176,14 +183,41 @@ onMounted(cargarPlatillos)
         <CatalogTable
           :titulo="DishesColumn.titulo"
           :columns="DishesColumn.columns"
-          :rows="Dishes?.items ?? []"
-          :total-registros="Dishes?.totalCount ?? 0"
+          :rows="dishes?.items ?? []"
+          :total-registros="dishes?.totalCount ?? 0"
           :pagina="pagina"
           :total-paginas="totalPaginas"
-          @eliminar="deleteRow"
-          @accion="handleAction"
-          @exportar="exportar"
+          @editar="openModalUpdate"
+          @eliminar="openModalDelete"
+          @exportar="exportTable"
           @cambiar-pagina="(p) => (pagina = p)"
+        />
+
+        <dishesModals
+          v-if="modalInsertEnable === true"
+          :is-insert="true"
+          :modal-title="'Crear Platillo'"
+          :modal-subtitle="'Ingrese los datos del platillo'"
+          @close="modalInsertEnable = false"
+          @insert="insertRow"
+        />
+
+        <dishesModals
+          v-if="modalUpdateEnable === true"
+          :modal-title="'Modificar Platillo'"
+          :modal-subtitle="'cambie los datos del platillo'"
+          @close="modalUpdateEnable = false"
+          @update="updateRow"
+          :name="currentRow?.name ?? ''"
+          :price="currentRow?.price ?? 0"
+        />
+
+        <dishesModals
+          v-if="modalDeleteEnable === true"
+          :is-delete="true"
+          @close="modalDeleteEnable = false"
+          @delete="deleteRow"
+          :name="currentRow?.name ?? ''"
         />
 
         <AppToast
