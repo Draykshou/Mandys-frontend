@@ -1,9 +1,5 @@
 import { api } from "@/lib/api-client"
-<<<<<<< HEAD
-import type { CreateCombo, UpdateCombo, Combos } from "@/types/CombosDtos"
-=======
 import type { Combo, Combos, CreateCombo, UpdateCombo } from "@/types/CombosDtos"
->>>>>>> origin/dev/carlos
 
 export async function getCombos(): Promise<Combos>{
     const response = await api.get<Combos>("/combos")
