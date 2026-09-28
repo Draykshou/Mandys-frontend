@@ -34,6 +34,6 @@ export interface Dishes{
     totalCount: number
     page: number
     pageSize: number
-    totalPage: number
+    totalPages: number
     items: Dish[]
 }

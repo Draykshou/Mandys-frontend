@@ -41,8 +41,8 @@ const productsColumn: CatalogoDef = {
   ],
 }
 
-const pagina = ref(1)
-const totalPaginas = ref(1)
+const page = ref(1)
+const totalPages = ref(1)
 
 // Filtro
 const filtro = reactive({
@@ -139,16 +139,20 @@ const deleteRow = async () => {
   }
 }
 
+const changePage = async (page: number) => {
+  await loadProducts(page)
+}
+
 const exportTable = () => {
   
 }
 
-const loadProducts = async () => {
+const loadProducts = async (p = 1) => {
   try{
-    products.value = await getProducts();
-    pagina.value = products.value.page
-    totalPaginas.value = products.value.totalPage
-    console.log(products.value)
+    products.value = await getProducts(p, 25)
+
+    page.value = products.value.page
+    totalPages.value = products.value.totalPages
   }
   catch(err){
     console.error('No se pudieron cargar los productos:', err)
@@ -197,12 +201,12 @@ onMounted(loadProducts)
           :columns="productsColumn.columns"
           :rows="products?.items ?? []"
           :total-registros="products?.totalCount ?? 0"
-          :pagina="pagina"
-          :total-paginas="totalPaginas"
+          :pagina="Number(products?.page)"
+          :total-paginas="Number(products?.totalPages)"
           @editar="openModalUpdate"
           @eliminar="openModalDelete"
           @exportar="exportTable"
-          @cambiar-pagina="(p) => (pagina = p)"
+          @cambiar-pagina="changePage"
         />
 
         <ProductsModals

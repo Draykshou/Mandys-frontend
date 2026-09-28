@@ -166,7 +166,7 @@ const loadDishes = async () => {
   try{
     dishes.value = await getDishes();
     page.value = dishes.value.page
-    totalPages.value = dishes.value.totalPage
+    totalPages.value = dishes.value.totalPages
     console.log(dishes.value)
   }
   catch(err){

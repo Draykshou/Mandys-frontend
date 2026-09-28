@@ -1,8 +1,19 @@
 import { api } from "@/lib/api-client"
 import type { CreateProduct, Product, Products, UpdateProduct } from "@/types/ProductsDtos"
 
-export async function getProducts(): Promise<Products>{
-    const response = await api.get<Products>("/products")
+export async function getProducts(
+    page = 1,
+    pageSize = 20,
+    search = ''
+) {
+    const response = await api.get<Products>('/products', {
+        params: {
+            page,
+            pageSize,
+            search: search || undefined
+        }
+    })
+
     return response.data
 }
 
