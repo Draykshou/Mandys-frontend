@@ -21,7 +21,7 @@ export interface FilaPrevia {
   fila: number
   descripcion: string
   isSupply: boolean
-  precio: number | null
+  salePrice: number | null
   unidad: string
   errores: string[]
 }
@@ -35,12 +35,12 @@ type CeldaExcel = string | number | boolean | Date | null | undefined
 
 type FilaExcel = CeldaExcel[]
 
-type ClaveColumna = 'description' | 'isSupply' | 'price' | 'measureUnit'
+type ClaveColumna = 'description' | 'isSupply' | 'salePrice' | 'measureUnit'
 
 const COLUMNAS: Record<ClaveColumna, readonly string[]> = {
   description: ['description', 'descripcion', 'nombre', 'name'],
   isSupply: ['issupply', 'insumo', 'esinsumo', 'esuninsumo'],
-  price: ['price', 'precio', 'costo', 'cost', 'preciounitario'],
+  salePrice: ['saleprice', 'preciodeventa', 'precio', 'price', 'pv'],
   measureUnit: ['measureunit', 'unidaddemedida', 'unidadmedida', 'unidad', 'um'],
 }
 
@@ -61,14 +61,16 @@ function normalizar(texto: string): string {
     .replace(/[^a-z0-9]/g, '')
 }
 
-function precioDesdeCelda(valor: CeldaExcel): { precio: number | null; error: string } {
+function salePriceDesdeCelda(valor: CeldaExcel): { salePrice: number | null; error: string } {
   const texto = textoDeCelda(valor)
-  if (texto === '') return { precio: null, error: 'El precio es obligatorio.' }
-  if (!/\d/.test(texto)) return { precio: null, error: `El precio "${texto}" no es un número.` }
+  if (texto === '') return { salePrice: null, error: 'El precio de venta es obligatorio.' }
+  if (!/\d/.test(texto)) {
+    return { salePrice: null, error: `El precio de venta "${texto}" no es un número.` }
+  }
 
-  const precio = toNumber(texto)
-  if (precio < 0) return { precio, error: 'El precio no puede ser negativo.' }
-  return { precio, error: '' }
+  const salePrice = toNumber(texto)
+  if (salePrice < 0) return { salePrice, error: 'El precio de venta no puede ser negativo.' }
+  return { salePrice, error: '' }
 }
 
 function isSupplyDesdeCelda(valor: CeldaExcel): { valor: boolean; error: string } {
@@ -87,7 +89,7 @@ function indicesDeColumnas(encabezados: FilaExcel): Record<ClaveColumna, number>
   return {
     description: indiceDe('description'),
     isSupply: indiceDe('isSupply'),
-    price: indiceDe('price'),
+    salePrice: indiceDe('salePrice'),
     measureUnit: indiceDe('measureUnit'),
   }
 }
@@ -189,14 +191,14 @@ export function useImportProducts() {
       }
 
       filas.value = cuerpo.map((celdas, indice) => {
-        const { precio, error: errorPrecio } = precioDesdeCelda(celdas[columnas.price])
+        const { salePrice, error: errorPrecio } = salePriceDesdeCelda(celdas[columnas.salePrice])
         const { valor, error: errorIsSupply } = isSupplyDesdeCelda(celdas[columnas.isSupply])
 
         return {
           fila: indice + 2, // +2 porque la fila 1 del archivo son los encabezados
           descripcion: textoDeCelda(celdas[columnas.description]),
           isSupply: valor,
-          precio,
+          salePrice,
           unidad: textoDeCelda(celdas[columnas.measureUnit]),
           errores: [errorPrecio, errorIsSupply].filter((e) => e !== ''),
         }
@@ -220,7 +222,7 @@ export function useImportProducts() {
     const productos: CreateProduct[] = validas.value.map((fila) => ({
       description: fila.descripcion.trim(),
       isSupply: fila.isSupply,
-      price: fila.precio as number,
+      salePrice: fila.salePrice as number,
       measureUnit: fila.unidad.trim(),
     }))
 

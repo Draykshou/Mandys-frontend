@@ -103,7 +103,7 @@ const hayPreview = computed(() => estado.value === 'listo' || estado.value === '
               {{ nombreArchivo || 'Selecciona un archivo .xlsx' }}
             </span>
             <span class="text-xs text-neutral-500">
-              Encabezados: descripción, insumo, precio, unidad de medida
+              Encabezados: descripción, insumo, precio de venta, unidad de medida
             </span>
           </button>
 
@@ -186,7 +186,7 @@ const hayPreview = computed(() => estado.value === 'listo' || estado.value === '
                   <th class="px-3 py-2.5 text-left font-bold">Fila</th>
                   <th class="px-3 py-2.5 text-left font-bold">Descripción</th>
                   <th class="px-3 py-2.5 text-left font-bold">Insumo</th>
-                  <th class="px-3 py-2.5 text-left font-bold">Precio</th>
+                  <th class="px-3 py-2.5 text-left font-bold">Precio de venta</th>
                   <th class="px-3 py-2.5 text-left font-bold">Unidad de medida</th>
                   <th class="px-3 py-2.5 text-left font-bold">Errores</th>
                 </tr>
@@ -206,7 +206,7 @@ const hayPreview = computed(() => estado.value === 'listo' || estado.value === '
                   </td>
                   <td class="px-3 py-2.5 text-secondary-800">{{ fila.descripcion || '—' }}</td>
                   <td class="px-3 py-2.5 text-secondary-800">{{ fila.isSupply ? 'Sí' : 'No' }}</td>
-                  <td class="px-3 py-2.5 text-secondary-800">{{ formatCurrency(fila.precio) }}</td>
+                  <td class="px-3 py-2.5 text-secondary-800">{{ formatCurrency(fila.salePrice) }}</td>
                   <td class="px-3 py-2.5 text-secondary-800">{{ fila.unidad || '—' }}</td>
                   <td class="px-3 py-2.5">
                     <span v-if="fila.errores.length === 0" class="text-neutral-400">—</span>

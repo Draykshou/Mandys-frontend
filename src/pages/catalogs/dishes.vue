@@ -156,7 +156,7 @@ const { exportando, exportar } = useExportCatalog()
 
 const exportTable = () => {
   void exportar(
-    'pdf',
+    'excel',
     {
       columns: DishesColumn.columns,
       titulo: DishesColumn.titulo,
@@ -221,7 +221,7 @@ onMounted(loadDishes)
           :total-registros="dishes?.totalCount ?? 0"
           :pagina="page"
           :total-paginas="totalPages"
-          formato-export="pdf"
+          formato-export="excel"
           :exportando="exportando"
           @editar="openModalUpdate"
           @eliminar="openModalDelete"

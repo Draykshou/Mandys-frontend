@@ -152,7 +152,7 @@ const { exportando, exportar } = useExportCatalog()
 
 const exportTable = () => {
   void exportar(
-    'pdf',
+    'excel',
     {
       columns: CombosColumn.columns,
       titulo: CombosColumn.titulo,
@@ -165,7 +165,8 @@ const loadCombos = async () => {
   try {
     combos.value = await getCombos()
     page.value = combos.value.page
-    totalPages.value = combos.value.totalPage
+    const response = combos.value as Combos & { totalPages?: number }
+    totalPages.value = response.totalPages ?? response.totalPage ?? 1
     console.log(combos.value)
   } catch (err) {
     console.error('No se pudieron cargar los combos:', err)
@@ -211,7 +212,7 @@ onMounted(loadCombos)
           :total-registros="combos?.totalCount ?? 0"
           :pagina="page"
           :total-paginas="totalPages"
-          formato-export="pdf"
+          formato-export="excel"
           :exportando="exportando"
           @editar="openModalUpdate"
           @eliminar="openModalDelete"

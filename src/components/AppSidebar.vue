@@ -4,7 +4,6 @@ import {
   ScanBarcode,
   Soup,
   ShoppingBasket,
-  Package,
   Store,
   Users
 } from 'lucide-vue-next'
