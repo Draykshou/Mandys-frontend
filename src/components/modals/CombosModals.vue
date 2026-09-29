@@ -472,7 +472,7 @@ onMounted(() => {
     </div>
 
     <DeleteModal
-      :visible="reasonModalEnable"
+      v-if="reasonModalEnable"
       @cancelar="emit('close')"
       @confirmar="confirmDelete"
     />

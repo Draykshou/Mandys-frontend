@@ -20,7 +20,6 @@ const props = withDefaults(
 
     description?: string
     isSupply?: boolean
-    costPrice?: number
     salePrice?: number
     measureUnit?: string
   }>(),
@@ -34,11 +33,12 @@ const isInsert = ref(props.isInsert ?? '')
 
 const description = ref(props.description?? '')
 const isSupply = ref(props.isSupply ?? '')
-const costPrice = ref<number | null>(props.costPrice ?? null)
 const salePrice = ref<number | null>(props.salePrice ?? null)
 const measureUnit = ref(props.measureUnit ?? '')
 
+
 const reason = ref('')
+const firstDeleteModel = ref(props.isDelete ?? '')
 const reasonModalEnable = ref(false)
 
 const validate = computed(() => {
@@ -60,9 +60,14 @@ watch(isSupply, (newValue) => {
 })
 
 const confirmDelete = () => {
-  console.log('Motivo de eliminación:', reason.value)
   reasonModalEnable.value = false
+  console.log('Motivo de eliminación:', reason.value)
   emit('delete', reason.value)
+}
+
+const changeDeleteModal = () => {
+  reasonModalEnable.value = true
+  firstDeleteModel.value = false
 }
 
 </script>
@@ -104,28 +109,6 @@ const confirmDelete = () => {
             />
           </div>
 
-          <!-- Campo numerico -->
-          <div class="px-8 pt-4">
-            <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-                Precio de compra
-                <span class="text-red-500">*</span>
-            </label>
-            <div class="relative">
-              <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <DollarSign :size="16" class="text-neutral-800" />
-              </div>
-              <input
-                disabled
-                v-model="costPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                class="w-full max-w-60 pl-10 pr-4 py-3 border rounded-xl text-sm bg-neutral-100 text-neutral-800 font-medium transition-all focus:outline-none focus:ring-1"
-                />
-            </div>
-          </div>
-
           <div class="px-8 pt-4">
             <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
               Unidad de medida
@@ -164,10 +147,9 @@ const confirmDelete = () => {
               </span>
             </label>
 
-            <div class="my-8">
+            <div v-if="!isSupply" class="my-8">
               <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
                 Precio de venta
-                <span class="text-red-500">*</span>
               </label>
               <div class="relative">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
@@ -216,7 +198,7 @@ const confirmDelete = () => {
       <!-- Modal de eliminar -->
 
       <div
-      v-if="isDelete && !reasonModalEnable"
+      v-if="firstDeleteModel"
       class="w-full max-w-120 flex flex-col rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden m-8"
       >
         <div class="bg-red-500 text-neutral-50 text-2xl text-center font-bold p-2">
@@ -239,7 +221,7 @@ const confirmDelete = () => {
           </button>
           <button 
             class="bg-red-500 hover:bg-red-600 border hover:border-secondary-600 active:bg-red-700 hover border-neutral-200 text-neutral-50 py-3 px-7 rounded-xl shadow-xl"
-            @click="reasonModalEnable = true"
+            @click="changeDeleteModal"
             >
             Confirmar
           </button>

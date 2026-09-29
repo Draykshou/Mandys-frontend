@@ -1,10 +1,24 @@
 import { api } from "@/lib/api-client"
 import type { CreateDish, Dish, Dishes, UpdateDish } from "@/types/DishesDtos"
 
-export async function getDishes(): Promise<Dishes>{
-    const response = await api.get<Dishes>("/dishes")
-    return response.data as Dishes
+export async function getDishes(
+    page = 1,
+    pageSize = 20,
+    search = '',
+    orderBy = ''
+) {
+    const response = await api.get<Dishes>('/dishes', {
+        params: {
+            page,
+            pageSize,
+            search: search || undefined,
+            orderBy
+        }
+    })
+
+    return response.data
 }
+
 
 export async function postDish(payload: CreateDish): Promise<Dish> {
     const response = await api.post<Dish>("/dishes", payload)

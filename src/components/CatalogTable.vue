@@ -42,7 +42,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   editar: [row: CatalogRow]
   eliminar: [row: CatalogRow]
-  accion: [payload: { columnKey: string; row: CatalogRow }]
+  accion: [row: CatalogRow]
   'cambiar-pagina': [pagina: number]
   exportar: []
 }>()
@@ -128,7 +128,7 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
                 type="button"
                 class="rounded-xl border px-3.5 py-1.5 text-caption font-semibold transition-colors"
                 :class="variantesBoton[col.buttonVariant ?? 'outlined']"
-                @click="emit('accion', { columnKey: col.key, row })"
+                @click="emit('accion', row)"
               >
                 {{ col.buttonLabel ?? 'Ver' }}
               </button>
@@ -139,7 +139,7 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
               <div class="flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  class="action-button hover:bg-primary-100 hover:text-primary-700 active:bg-primary-200"
+                  class="action-button hover:bg-blue-100 hover:text-blue-700 active:bg-blue-200"
                   title="Editar"
                   aria-label="Editar"
                   @click="emit('editar', row)"

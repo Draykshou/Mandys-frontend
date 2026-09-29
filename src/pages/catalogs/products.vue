@@ -78,10 +78,9 @@ const insertRow = async (description: string, isSupply: boolean, salePrice: numb
   console.log("insert call")
 
   try {
-    const response = await postProduct(product)
+    await postProduct(product)
     modalInsertEnable.value = false
     mostrarToast('Producto agregado correctamente.','exito')
-    console.log(response)
     await loadProducts()
   } catch (err) {
     console.error("No se pudo crear el producto:", err)
@@ -120,21 +119,24 @@ const updateRow = async (description: string, isSupply: boolean, salePrice: numb
   }
   console.log("update call")
   try {
-    const response = await putProduct(currentRow.value?.id as number, product)
+    await putProduct(currentRow.value?.id as number, product)
     modalUpdateEnable.value = false
-    mostrarToast('Producto agregado correctamente.','exito')
-    console.log(response)
+    mostrarToast('Producto actualizado correctamente.','actualizar')
+    await loadProducts()
     
   } catch (err) {
     console.error("No se pudo actualizar el producto:", err)
+    mostrarToast('Ha habido un error','error')
   }
 }
 
 const deleteRow = async () => {
   try {
-    const response = await deleteProduct(currentRow.value?.id as number)
-    console.log(response)
-    window.location.reload()
+    await deleteProduct(currentRow.value?.id as number)
+    modalDeleteEnable.value = false
+    mostrarToast('Producto eliminado correctamente.','eliminar')
+    await loadProducts()
+    
   } catch (err) {
     console.error("No se pudo crear el producto:", err)
   }
@@ -151,7 +153,6 @@ const exportTable = () => {
 const loadProducts = async (p = 1) => {
   try{
     products.value = await getProducts(p, 20, "", "description", null)
-
     page.value = products.value.page
     totalPages.value = products.value.totalPages
   }
@@ -202,8 +203,8 @@ onMounted(loadProducts)
           :columns="productsColumn.columns"
           :rows="products?.items ?? []"
           :total-registros="products?.totalCount ?? 0"
-          :pagina="Number(products?.page)"
-          :total-paginas="Number(products?.totalPages)"
+          :pagina="page"
+          :total-paginas="totalPages"
           @editar="openModalUpdate"
           @eliminar="openModalDelete"
           @exportar="exportTable"

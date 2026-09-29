@@ -17,24 +17,6 @@ import { postCombo, putCombo, deleteCombo, getCombos } from '@/service/CombosSer
 
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
-const ESTILOS: Record<ToastTipo, { icono: Component; caja: string; barra: string }> = {
-  exito: {
-    icono: CheckCircle,
-    caja: 'border-green-200 bg-green-50 text-green-900',
-    barra: 'bg-green-500',
-  },
-  eliminar: {
-    icono: Trash2,
-    caja: 'border-red-200 bg-red-50 text-red-900',
-    barra: 'bg-red-500',
-  },
-  error: {
-    icono: AlertCircle,
-    caja: 'border-red-200 bg-red-50 text-red-900',
-    barra: 'bg-red-500',
-  },
-}
-
 interface CatalogoDef {
   titulo: string
   subtitulo: string
