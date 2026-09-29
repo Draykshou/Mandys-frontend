@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url("https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
 
 html,
 body,
@@ -100,6 +100,47 @@ body,
   --secondary: var(--color-secondary-800);
   --tertiary: var(--color-tertiary-500);
   --neutral: var(--color-neutral-100);
+}
+
+/* ---------------------------------------------------------
+   Componentes compartidos
+   Clases para los inputs de FormField y los botones de acción
+   de CatalogTable, así el estilo vive en un solo lugar.
+--------------------------------------------------------- */
+@layer components {
+  .field-control {
+    @apply w-full rounded-xl border py-2.5 text-sm font-medium text-secondary-800
+      placeholder-neutral-300 transition-all focus:outline-none focus:ring-2;
+  }
+
+  .field-control-ok {
+    @apply border-neutral-200 bg-neutral-100 focus:border-primary-600 focus:ring-primary-600/30;
+  }
+
+  .field-control-error {
+    @apply border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-300;
+  }
+
+  /* Campo que se calcula solo: mismo tamaño, pero no se puede escribir. */
+  .field-control-readonly {
+    @apply cursor-default border-neutral-200 bg-neutral-200 font-bold text-secondary-900;
+  }
+
+  /* Oculta las flechitas de los inputs numéricos */
+  .field-control[type='number']::-webkit-inner-spin-button,
+  .field-control[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+
+  .field-control[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  .action-button {
+    @apply flex h-9 w-9 items-center justify-center rounded-xl text-neutral-500
+      transition-colors duration-150
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500;
+  }
 }
 
 /* ---------------------------------------------------------
