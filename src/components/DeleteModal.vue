@@ -1,28 +1,30 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-const props = defineProps<{
-  visible: boolean
-}>()
+
 const emit = defineEmits<{
   cancelar: []
   confirmar: [motivo: string]
 }>()
+
 const motivo = ref('')
 const puedeConfirmar = computed(() => motivo.value.trim().length >= 25)
 const caracteres = computed(() => motivo.value.trim().length)
+
 function cancelar() {
   motivo.value = ''
   emit('cancelar')
 }
+
 function confirmar() {
   if (!puedeConfirmar.value) return
   emit('confirmar', motivo.value.trim())
   motivo.value = ''
 }
+
 </script>
 
 <template>
-  <div v-if="visible" class="fixed inset-0 z-60 flex items-center justify-center bg-black/50">
+  <div class="fixed inset-0 z-60 flex items-center justify-center bg-black/50">
     <div class="w-full max-w-md rounded-lg bg-neutral-100 p-6 shadow-xl">
       <h2 class="text-xl font-semibold text-secondary-800">Motivo de eliminación</h2>
       <p class="mt-2 text-sm text-gray-600">Ingrese el motivo por el cual desea eliminar este registro.</p>

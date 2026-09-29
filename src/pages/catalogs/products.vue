@@ -33,10 +33,10 @@ const productsColumn: CatalogoDef = {
   textoBoton: 'Agregar Producto',
   categorias: ['Todos', 'Bebidas', 'Comida', 'Postres'],
   columns: [
-    { key: 'id', label: 'ID', type: 'text' },
     { key: 'description', label: 'Descripción', type: 'text' },
     { key: 'isSupply', label: 'Insumo', type: 'boolean' },
-    { key: 'price', label: 'Precio', type: 'currency' },
+    { key: 'costPrice', label: 'Precio de compra', type: 'currency' },
+    { key: 'salePrice', label: 'Precio de venta', type: 'currency' },
     { key: 'measureUnit', label: 'Unidad de medida', type: 'text' },
   ],
 }
@@ -68,11 +68,11 @@ const currentRow = ref<Product | null>(null)
 const modalDeleteEnable = ref(false)
 
 // CUD
-const insertRow = async (description: string, isSupply: boolean, price: number, measureUnit: string) => {
+const insertRow = async (description: string, isSupply: boolean, salePrice: number, measureUnit: string) => {
   const product : CreateProduct = {
     description: description,
     isSupply: isSupply,
-    price: price,
+    salePrice: salePrice,
     measureUnit: measureUnit
   }
   console.log("insert call")
@@ -94,7 +94,8 @@ const loadRowInformation = (row: CatalogRow) => {
     id: Number(row.id),
     description: String(row.description),
     isSupply: Boolean(row.isSupply),
-    price: Number(row.price),
+    costPrice: Number(row.costprice),
+    salePrice: Number(row.salePrice),
     measureUnit: String(row.measureUnit),
   }
 }
@@ -110,11 +111,11 @@ const openModalDelete = (row: CatalogRow) => {
 }
 
 
-const updateRow = async (description: string, isSupply: boolean, price: number, measureUnit: string) => {
+const updateRow = async (description: string, isSupply: boolean, salePrice: number, measureUnit: string) => {
   const product : UpdateProduct = {
     description: description,
     isSupply: isSupply,
-    price: price,
+    salePrice: salePrice,
     measureUnit: measureUnit
   }
   console.log("update call")
@@ -149,7 +150,7 @@ const exportTable = () => {
 
 const loadProducts = async (p = 1) => {
   try{
-    products.value = await getProducts(p, 25)
+    products.value = await getProducts(p, 20, "", "description", null)
 
     page.value = products.value.page
     totalPages.value = products.value.totalPages
@@ -226,7 +227,8 @@ onMounted(loadProducts)
           @update="updateRow"
           :description="currentRow?.description"
           :is-supply="currentRow?.isSupply"
-          :price="currentRow?.price"
+          :cost-price ="currentRow?.costPrice"
+          :sale-price="currentRow?.salePrice"
           :measure-unit="currentRow?.measureUnit"
         />
 

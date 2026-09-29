@@ -4,13 +4,17 @@ import type { CreateProduct, Product, Products, UpdateProduct } from "@/types/Pr
 export async function getProducts(
     page = 1,
     pageSize = 20,
-    search = ''
+    search = '',
+    orderBy = '',
+    isSupply: boolean | null
 ) {
     const response = await api.get<Products>('/products', {
         params: {
             page,
             pageSize,
-            search: search || undefined
+            search: search || undefined,
+            orderBy,
+            isSupply
         }
     })
 

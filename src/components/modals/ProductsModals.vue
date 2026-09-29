@@ -20,9 +20,9 @@ const props = withDefaults(
 
     description?: string
     isSupply?: boolean
-    price?: number
-    measureUnit?: string
+    costPrice?: number
     salePrice?: number
+    measureUnit?: string
   }>(),
   {
     isInsert: false,
@@ -34,9 +34,9 @@ const isInsert = ref(props.isInsert ?? '')
 
 const description = ref(props.description?? '')
 const isSupply = ref(props.isSupply ?? '')
-const price = ref<number | null>(props.price ?? null)
+const costPrice = ref<number | null>(props.costPrice ?? null)
+const salePrice = ref<number | null>(props.salePrice ?? null)
 const measureUnit = ref(props.measureUnit ?? '')
-const salePrice = ref(props.salePrice ?? '')
 
 const reason = ref('')
 const reasonModalEnable = ref(false)
@@ -44,20 +44,18 @@ const reasonModalEnable = ref(false)
 const validate = computed(() => {
   return (
     description.value.trim() !== '' &&
-    price.value !== null &&
-    price.value !== undefined &&
     measureUnit.value !== '' &&
     (isSupply.value || (
-      salePrice.value !== '' &&
       salePrice.value !== null &&
-      salePrice.value !== undefined
+      salePrice.value !== undefined &&
+      salePrice.value >= 0
     ))
   )
 })
 
 watch(isSupply, (newValue) => {
   if (newValue) {
-    salePrice.value = ""
+    salePrice.value = 0
   }
 })
 
@@ -94,7 +92,7 @@ const confirmDelete = () => {
           <!-- Campo de texto -->
           <div class="px-8 pt-4">
             <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-                  Nombre del platillo
+                  Nombre del producto
                   <span class="text-red-500">*</span>
             </label>
             <input
@@ -109,7 +107,7 @@ const confirmDelete = () => {
           <!-- Campo numerico -->
           <div class="px-8 pt-4">
             <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-                Precio por unidad
+                Precio de compra
                 <span class="text-red-500">*</span>
             </label>
             <div class="relative">
@@ -117,7 +115,8 @@ const confirmDelete = () => {
                 <DollarSign :size="16" class="text-neutral-800" />
               </div>
               <input
-                v-model="price"
+                disabled
+                v-model="costPrice"
                 type="number"
                 step="0.01"
                 min="0"
@@ -206,8 +205,8 @@ const confirmDelete = () => {
                   disabled:cursor-not-allowed
                   disabled:shadow-none"
             @click="isInsert
-              ? emit('insert', description, isSupply, price as number, measureUnit)
-              : emit('update', description, isSupply, price as number, measureUnit)"
+              ? emit('insert', description, isSupply, salePrice as number, measureUnit)
+              : emit('update', description, isSupply, salePrice as number, measureUnit)"
           >
             Guardar
           </button>
@@ -248,7 +247,7 @@ const confirmDelete = () => {
       </div>
 
       <DeleteModal
-        :visible="reasonModalEnable"
+        v-if="reasonModalEnable"
         @cancelar="emit('close')"
         @confirmar="confirmDelete"
       />

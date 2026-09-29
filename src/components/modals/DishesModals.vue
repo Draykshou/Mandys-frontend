@@ -57,12 +57,14 @@ const filterProducts = computed ( ()=> {
 })
 const loadProducts=async()=>{
     try{
-        const response=await getProducts()
+        const response=await getProducts(1,50,"","",true)
         products.value=response.items
     }catch(err){
         console.error('No se pudieron cargar los productos:',err)
     }
 }
+
+
 const selectProduct=(product:Product)=>{
     productoSeleccionado.value=product
     productSearch.value=product.description
@@ -366,7 +368,7 @@ onMounted(loadProducts)
     </div>
 
     <DeleteModal
-      :visible="reasonModalEnable"
+      v-if="reasonModalEnable"
       @cancelar="emit('close')"
       @confirmar="confirmDelete"
     />
