@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 import { formatCurrency } from '@/utils/format'
-import { Sheet, Pencil, Trash, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { Sheet, Pencil, Trash, ChevronLeft, ChevronRight, FileText, Loader } from 'lucide-vue-next'
 import { animate } from 'animejs'
 
 const onBeforeEnter = (el: Element) => {
@@ -33,9 +33,14 @@ const props = withDefaults(
     totalRegistros: number
     pagina: number
     totalPaginas: number
+    /** Formato del botón de exportación: `pdf` cambia rótulo e icono. */
+    formatoExport?: 'excel' | 'pdf'
+    /** Spinner y botón deshabilitado mientras se genera el archivo. */
+    exportando?: boolean
   }>(),
   {
-    
+    formatoExport: 'excel',
+    exportando: false,
   },
 )
 
@@ -173,9 +178,17 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
         <span class="font-semibold text-secondary-700">{{ totalRegistros }}</span> registros
       </p>
 
-      <button type="button" class="btn btn-inverted flex items-center gap-1 bg-green-700 hover:bg-green-800 active:bg-green-900 text-neutral-100 p-2 rounded-xl" @click="emit('exportar')">
-        <Sheet class="h-4 w-4" />
-          Exportar Excel
+      <button
+        type="button"
+        :disabled="exportando"
+        class="btn btn-inverted flex items-center gap-1 bg-green-700 hover:bg-green-800 active:bg-green-900 text-neutral-100 p-2 rounded-xl
+               disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed"
+        @click="emit('exportar')"
+      >
+        <Loader v-if="exportando" class="h-4 w-4 animate-spin" />
+        <FileText v-else-if="formatoExport === 'pdf'" class="h-4 w-4" />
+        <Sheet v-else class="h-4 w-4" />
+          {{ formatoExport === 'pdf' ? 'Exportar PDF' : 'Exportar Excel' }}
         </button>
 
       

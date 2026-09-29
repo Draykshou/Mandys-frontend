@@ -19,6 +19,8 @@ const emit = defineEmits<{
       <p class="mt-1 text-body text-neutral-600">{{ subtitulo }}</p>
     </div>
 
+    <div class="flex items-center gap-3">
+    <slot name="acciones" />
     <button type="button" class="flex flex-row gap-1 items-center rounded-xl p-2 
                                 btn btn-primary bg-(--primary) text-neutral-100 text-xl text-bold shadow-sm
                                 hover:bg-primary-700 hover:shadow-md transition-all duration-300
@@ -27,5 +29,6 @@ const emit = defineEmits<{
       <Plus :size="20" class="text-(--neutral)"/>
       {{ textoBoton }}
     </button>
+    </div>
   </div>
 </template>

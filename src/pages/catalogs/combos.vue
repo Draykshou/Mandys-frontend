@@ -9,6 +9,7 @@ import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import CombosModals from '@/components/modals/CombosModals.vue'
 import { useToast } from '@/composables/useToast'
+import { useExportCatalog } from '@/composables/useExportCatalog'
 import type { ToastTipo } from '@/types/Toast'
 import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 import type { Combo, Combos, CreateCombo, UpdateCombo } from '@/types/CombosDtos'
@@ -162,7 +163,20 @@ const deleteRow = async (reason: string) => {
   }
 }
 
+/** `getCombos` ya devuelve el catálogo tal como lo muestra la tabla. */
+const cargarCatalogo = async () => (await getCombos()).items
+
+const { exportando, exportar } = useExportCatalog()
+
 const exportTable = () => {
+  void exportar(
+    'pdf',
+    {
+      columns: CombosColumn.columns,
+      titulo: CombosColumn.titulo,
+    },
+    cargarCatalogo,
+  )
 }
 
 const loadCombos = async () => {
@@ -215,6 +229,8 @@ onMounted(loadCombos)
           :total-registros="combos?.totalCount ?? 0"
           :pagina="page"
           :total-paginas="totalPages"
+          formato-export="pdf"
+          :exportando="exportando"
           @editar="openModalUpdate"
           @eliminar="openModalDelete"
           @exportar="exportTable"

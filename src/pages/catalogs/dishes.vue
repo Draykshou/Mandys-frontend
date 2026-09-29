@@ -10,6 +10,7 @@ import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import DishesModals from '@/components/modals/DishesModals.vue'
 import { useToast } from '@/composables/useToast'
+import { useExportCatalog } from '@/composables/useExportCatalog'
 
 import type { ToastTipo } from '@/types/Toast'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
@@ -158,8 +159,20 @@ const deleteRow = async (reason: string) => {
     }
 }
 
+/** `getDishes` ya devuelve el catálogo tal como lo muestra la tabla. */
+const cargarCatalogo = async () => (await getDishes()).items
+
+const { exportando, exportar } = useExportCatalog()
+
 const exportTable = () => {
-  
+  void exportar(
+    'pdf',
+    {
+      columns: DishesColumn.columns,
+      titulo: DishesColumn.titulo,
+    },
+    cargarCatalogo,
+  )
 }
 
 const loadDishes = async () => {
@@ -218,6 +231,8 @@ onMounted(loadDishes)
           :total-registros="dishes?.totalCount ?? 0"
           :pagina="page"
           :total-paginas="totalPages"
+          formato-export="pdf"
+          :exportando="exportando"
           @editar="openModalUpdate"
           @eliminar="openModalDelete"
           @exportar="exportTable"
