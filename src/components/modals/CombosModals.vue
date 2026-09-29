@@ -100,7 +100,7 @@ const loadDishes = async () => {
 
 const loadProducts = async () => {
   try {
-    const response = await getProducts()
+    const response = await getProducts(1, 50, "", "description", false)
 
     availableProducts.value = response.items.filter(
       product => !product.isSupply
@@ -472,7 +472,7 @@ onMounted(() => {
     </div>
 
     <DeleteModal
-      :visible="reasonModalEnable"
+      v-if="reasonModalEnable"
       @cancelar="emit('close')"
       @confirmar="confirmDelete"
     />
