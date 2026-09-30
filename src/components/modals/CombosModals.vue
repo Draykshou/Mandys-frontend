@@ -1,6 +1,5 @@
-```vue
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { DollarSign, OctagonAlert, Trash2 } from 'lucide-vue-next'
 import type { Combo, CreateCombo, UpdateCombo } from '@/types/CombosDtos'
 import type { Dish } from '@/types/DishesDtos'
@@ -23,19 +22,23 @@ const emit = defineEmits<{
   insert: [string, number, CreateCombo['dishes'], CreateCombo['products']]
   update: [string, number, UpdateCombo['dishes'], UpdateCombo['products']]
   delete: [string]
+  action: []
 }>()
 
 const props = withDefaults(
   defineProps<{
     isInsert?: boolean
     isDelete?: boolean
+    isAction?: boolean
+
     modalTitle?: string
     modalSubtitle?: string
     combo?: Combo
   }>(),
   {
     isInsert: false,
-    isDelete: false
+    isDelete: false,
+    isAction: false
   }
 )
 
@@ -49,7 +52,9 @@ const comboItems = ref<ComboItem[]>([])
 const search = ref('')
 const selectedItem = ref<ComboItem | null>(null)
 const quantity = ref<number | null>(null)
+const searchLoading = ref(false)
 
+const firstDeleteModel = ref(props.isDelete ?? '')
 const reasonModalEnable = ref(false)
 const contentEnable = ref(false)
 
@@ -57,76 +62,100 @@ const validate = computed(() => {
   return (
     name.value.trim() !== '' &&
     price.value !== null &&
-    price.value >= 0
+    price.value >= 0 &&
+    comboItems.value.length > 0
   )
 })
 
-const filteredItems = computed(() => {
-  const texto = search.value.trim().toLowerCase()
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
+let searchRequestId = 0
 
-  if (!texto) return []
+const searchItems = async () => {
+  const searchText = search.value.trim()
 
-  const dishes = availableDishes.value
-    .filter(dish => dish.name.toLowerCase().includes(texto))
-    .map(dish => ({
-      type: 'dish' as const,
-      id: dish.id,
-      name: dish.name,
-      quantity: 1,
-      dish
-    }))
+  if (!searchText) {
+    availableDishes.value = []
+    availableProducts.value = []
+    return
+  }
 
-  const products = availableProducts.value
-    .filter(product => product.description.toLowerCase().includes(texto))
-    .map(product => ({
-      type: 'product' as const,
-      id: product.id,
-      name: product.description,
-      quantity: 1,
-      product
-    }))
+  const requestId = ++searchRequestId
+
+  try {
+    searchLoading.value = true
+
+    const [dishesResponse, productsResponse] = await Promise.all([
+      getDishes(1, 20, searchText),
+      getProducts(1, 20, searchText, 'description', false)
+    ])
+
+    if (requestId !== searchRequestId) return
+
+    availableDishes.value = dishesResponse.items
+    availableProducts.value = productsResponse.items
+  } catch (err) {
+    console.error('Could not search combo items:', err)
+
+    if (requestId === searchRequestId) {
+      availableDishes.value = []
+      availableProducts.value = []
+    }
+  } finally {
+    if (requestId === searchRequestId) {
+      searchLoading.value = false
+    }
+  }
+}
+
+const scheduleSearch = () => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+
+  searchTimeout = setTimeout(() => {
+    searchItems()
+  }, 300)
+}
+
+const searchResults = computed<ComboItem[]>(() => {
+  const dishes = availableDishes.value.map(dish => ({
+    type: 'dish' as const,
+    id: dish.id,
+    name: dish.name,
+    quantity: 1,
+    dish
+  }))
+
+  const products = availableProducts.value.map(product => ({
+    type: 'product' as const,
+    id: product.id,
+    name: product.description,
+    quantity: 1,
+    product
+  }))
 
   return [...dishes, ...products]
 })
 
-const loadDishes = async () => {
-  try {
-    const response = await getDishes()
-    availableDishes.value = response.items
-  } catch (err) {
-    console.error('No se pudieron cargar los platillos:', err)
-  }
-}
-
-const loadProducts = async () => {
-  try {
-    const response = await getProducts(1, 50, "", "description", false)
-
-    availableProducts.value = response.items.filter(
-      product => !product.isSupply
-    )
-  } catch (err) {
-    console.error('No se pudieron cargar los productos:', err)
-  }
-}
-
 const selectItem = (item: ComboItem) => {
   selectedItem.value = item
   search.value = item.name
+  availableDishes.value = []
+  availableProducts.value = []
 }
 
 const addItem = () => {
   if (!selectedItem.value) return
   if (quantity.value === null || quantity.value <= 0) return
 
-  const itemExistente = comboItems.value.find(
+  const existingItem = comboItems.value.find(
     item =>
       item.type === selectedItem.value!.type &&
       item.id === selectedItem.value!.id
   )
 
-  if (itemExistente) {
-    itemExistente.quantity = quantity.value
+  if (existingItem) {
+    existingItem.quantity = quantity.value
   } else {
     comboItems.value.push({
       ...selectedItem.value,
@@ -137,6 +166,9 @@ const addItem = () => {
   search.value = ''
   selectedItem.value = null
   quantity.value = null
+
+  availableDishes.value = []
+  availableProducts.value = []
 }
 
 const deleteItem = (item: ComboItem) => {
@@ -182,39 +214,49 @@ const save = () => {
   }
 }
 
-const confirmDelete = (motivo: string) => {
-  console.log('Motivo de eliminación:', motivo)
+const confirmDelete = (reason: string) => {
+  console.log('Deletion reason:', reason)
   reasonModalEnable.value = false
-  emit('delete', motivo)
+  emit('delete', reason)
 }
 
 const loadComboItems = () => {
   if (!props.combo) return
 
   comboItems.value = [
-    ...props.combo.dishes.map(dish => ({
+    ...props.combo.dishes.map(item => ({
       type: 'dish' as const,
-      id: dish.id,
-      name: dish.name,
-      quantity: 1,
-      dish
+      id: item.dish.id,
+      name: item.dish.name,
+      quantity: item.quantity,
+      dish: item.dish
     })),
     ...props.combo.products
-      .filter(product => !product.isSupply)
-      .map(product => ({
+      .filter(item => !item.product.isSupply)
+      .map(item => ({
         type: 'product' as const,
-        id: product.id,
-        name: product.description,
-        quantity: 1,
-        product
+        id: item.product.id,
+        name: item.product.description,
+        quantity: item.quantity,
+        product: item.product
       }))
   ]
 }
 
+const changeDeleteModal = () => {
+  reasonModalEnable.value = true
+  firstDeleteModel.value = false
+}
+
+
 onMounted(() => {
-  loadDishes()
-  loadProducts()
   loadComboItems()
+})
+
+onBeforeUnmount(() => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
 })
 </script>
 
@@ -226,7 +268,7 @@ onMounted(() => {
   >
     <!-- Modal principal -->
     <div
-      v-if="!isDelete"
+      v-if="!isDelete && !isAction"
       class="flex flex-col rounded-2xl shadow-2xl w-full max-w-xl bg-neutral-50 overflow-hidden"
       style="max-height: 92vh;"
     >
@@ -309,7 +351,7 @@ onMounted(() => {
 
     <!-- Modal de contenido -->
     <div
-      v-if="!isDelete && contentEnable"
+      v-if="contentEnable || isAction"
       class="flex flex-col w-full max-w-2xl h-full max-h-170 rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden ml-6"
     >
       <div class="border-b border-neutral-200 p-4 shrink-0">
@@ -346,16 +388,11 @@ onMounted(() => {
                   :key="`${item.type}-${item.id}`"
                   class="border-t border-neutral-200"
                 >
-                  <td class="px-4 py-3">
-                    {{ item.name }}
-                  </td>
-
-                  <td class="px-4 py-3 text-center">
-                    {{ item.quantity }}
-                  </td>
-
+                  <td class="px-4 py-3"> {{ item.name }} </td>
+                  <td class="px-4 py-3 text-center"> {{ item.quantity }} </td>
                   <td class="px-4 py-3 text-center">
                     <button
+                      v-if="!isAction"
                       type="button"
                       class="text-red-500 hover:text-red-700"
                       @click="deleteItem(item)"
@@ -384,18 +421,20 @@ onMounted(() => {
           <div class="flex gap-3">
             <div class="flex-1 relative">
               <input
+                v-if="!isAction"
                 v-model="search"
                 type="text"
                 placeholder="Buscar platillo o producto..."
                 class="w-full px-4 py-3 border rounded-xl"
+                @input="scheduleSearch"
               />
 
               <div
-                v-if="filteredItems.length > 0"
+                v-if="searchResults.length > 0"
                 class="absolute z-20 w-full bottom-full mb-1 bg-white border rounded-xl shadow-lg max-h-40 overflow-y-auto"
               >
                 <button
-                  v-for="item in filteredItems"
+                  v-for="item in searchResults"
                   :key="`${item.type}-${item.id}`"
                   type="button"
                   class="w-full text-left px-4 py-2 hover:bg-neutral-100"
@@ -404,9 +443,17 @@ onMounted(() => {
                   {{ item.name }}
                 </button>
               </div>
+
+              <div
+                v-if="searchLoading"
+                class="absolute z-20 w-full bottom-full mb-1 bg-white border rounded-xl shadow-lg px-4 py-3 text-neutral-500"
+              >
+                Buscando...
+              </div>
             </div>
 
             <input
+              v-if="!isAction"
               v-model="quantity"
               type="number"
               min="1"
@@ -416,21 +463,32 @@ onMounted(() => {
             />
           </div>
 
-          <button
-            type="button"
-            class="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed"
-            :disabled="!selectedItem || quantity === null || quantity <= 0"
-            @click="addItem"
-          >
-            Agregar
-          </button>
+          <div class="flex justify-center">
+            <button
+              v-if="!isAction"
+              type="button"
+              class="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed"
+              :disabled="!selectedItem || quantity === null || quantity <= 0"
+              @click="addItem"
+            >
+              Agregar
+            </button>
+            <button
+              v-if="isAction"
+              class="w-full max-w-50 bg-primary-600 hover:bg-primary-500 active:bg-primary-400 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed
+              flex flex-row gap-2 justify-center"
+              >
+              <FileText :size="24" class=" text-neutral-50"/>
+                Exportar PDF
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Modal de eliminación -->
     <div
-      v-if="isDelete && !reasonModalEnable"
+      v-if="firstDeleteModel"
       class="w-full max-w-120 flex flex-col rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden m-8"
     >
       <div class="bg-red-500 text-neutral-50 text-2xl text-center font-bold p-2">
@@ -464,7 +522,7 @@ onMounted(() => {
         <button
           type="button"
           class="bg-red-500 hover:bg-red-600 active:bg-red-700 border-neutral-200 text-neutral-50 py-3 px-7 rounded-xl shadow-xl"
-          @click="reasonModalEnable = true"
+          @click="changeDeleteModal"
         >
           Confirmar
         </button>
@@ -478,4 +536,4 @@ onMounted(() => {
     />
   </div>
 </template>
-```
+

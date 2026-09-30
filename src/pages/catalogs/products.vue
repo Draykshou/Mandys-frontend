@@ -84,7 +84,7 @@ const insertRow = async (description: string, isSupply: boolean, salePrice: numb
     await loadProducts()
   } catch (err) {
     console.error("No se pudo crear el producto:", err)
-    mostrarToast(obtenerMensajeError(err,'No se pudo crear el platillo.'),'error')
+    mostrarToast(obtenerMensajeError(err,'No se pudo crear el Producto.'),'error')
   }
 }
 
@@ -126,7 +126,7 @@ const updateRow = async (description: string, isSupply: boolean, salePrice: numb
     
   } catch (err) {
     console.error("No se pudo actualizar el producto:", err)
-    mostrarToast('Ha habido un error','error')
+    mostrarToast(obtenerMensajeError(err,'No se pudo actualizar el Producto.'),'error')
   }
 }
 
@@ -139,6 +139,7 @@ const deleteRow = async () => {
     
   } catch (err) {
     console.error("No se pudo crear el producto:", err)
+    mostrarToast(obtenerMensajeError(err,'No se pudo eliminar el Producto.'),'error')
   }
 }
 
