@@ -5,8 +5,14 @@ export interface Combo {
     id: number
     name: string
     price: number
-    dishes: Dish[]
-    products: Product[]
+    dishes: {
+        dish: Dish
+        quantity: number
+    }[]
+    products: {
+        product: Product
+        quantity: number
+    }[]
 }
 
 export interface CreateCombo {
@@ -39,6 +45,6 @@ export interface Combos {
     totalCount: number
     page: number
     pageSize: number
-    totalPage: number
+    totalPages: number
     items: Combo[]
 }

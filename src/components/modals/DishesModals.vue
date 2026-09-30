@@ -1,13 +1,11 @@
 <script setup lang="ts">
 
-import { ref,computed,onMounted } from 'vue'
-import { DollarSign,OctagonAlert,Trash2, FileText } from 'lucide-vue-next'
-import type { Dish,Recipe,CreateDish,UpdateDish } from '@/types/DishesDtos'
+import { ref, computed, watch } from 'vue'
+import { DollarSign, OctagonAlert, Trash2, FileText } from 'lucide-vue-next'
+import type { Dish , Recipe, CreateDish, UpdateDish } from '@/types/DishesDtos'
 import type { Product } from '@/types/ProductsDtos'
 import { getProducts } from '@/service/ProductsService'
 import DeleteModal from '@/components/DeleteModal.vue'
-import { useExportCatalog } from '@/composables/useExportCatalog'
-import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 
 const emit = defineEmits<{
   close: []
@@ -37,61 +35,62 @@ const props = withDefaults(
 
 const name=ref(props.dish?.name??'')
 const price=ref<number|null>(props.dish?.price??null)
-const recipe = ref<Recipe[]>([])
+const recipe=ref<Recipe[]>(props.dish?.recipe?[...props.dish.recipe]:[])
+
+
 const productoSeleccionado=ref<Product|null>(null)
-const products=ref<Product[]>([])
-const productSearch=ref('')
 const quantity=ref<number|null>(null)
+
+const products = ref<Product[]>([])
+const productSearch = ref('')
+const productLoading = ref(false)
 
 const reason = ref('')
 const recipeEnable = ref(false)
 const firstDeleteModel = ref(props.isDelete ?? '')
 const reasonModalEnable = ref(false)
-const { exportando, exportar } = useExportCatalog()
-
-const recipeColumns: CatalogColumn[] = [
-  { key: 'product', label: 'Producto', type: 'text' },
-  { key: 'quantity', label: 'Cantidad', type: 'text' },
-  { key: 'measureUnit', label: 'Unidad de medida', type: 'text' },
-]
 
 const validate = computed(() => {
   return (
     name.value.trim() !== '' &&
     price.value !== null &&
-    price.value >= 0
+    price.value >= 0 &&
+    recipe.value.length !== 0
   )
 })
 
-const filterProducts = computed ( ()=> {
-    const texto=productSearch.value.trim().toLowerCase()
-    if(!texto)return[]
-    return products.value.filter(product => product.description.toLowerCase().includes(texto))
-})
+const searchProducts = async () => {
+    const search = productSearch.value.trim()
 
-const loadProducts=async()=>{
-    try{
-        const response=await getProducts(1,50,"","",true)
-        products.value=response.items
-        recipe.value = (props.dish?.recipe ?? []).flatMap((item) => {
-          const recipeItem = item as unknown as {
-            product?: Product
-            productId?: number
-            quantity?: number
-          }
-          const product = recipeItem.product ?? products.value.find(
-            candidate => candidate.id === recipeItem.productId,
-          )
+    if (!search) {
+        products.value = []
+        return
+    }
 
-          return product && recipeItem.quantity !== undefined
-            ? [{ product, quantity: recipeItem.quantity }]
-            : []
-        })
-    }catch(err){
-        console.error('No se pudieron cargar los productos:',err)
+    try {
+        productLoading.value = true
+
+        const response = await getProducts(1, 20, search, 'description', true)
+        products.value = response.items
+    } catch (err) {
+        console.error('No se pudieron buscar los productos:', err)
+        products.value = []
+    } finally {
+        productLoading.value = false
     }
 }
 
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(productSearch, () => {
+    if (searchTimeout) {
+        clearTimeout(searchTimeout)
+    }
+
+    searchTimeout = setTimeout(() => {
+        searchProducts()
+    }, 300)
+})
 
 const selectProduct=(product:Product)=>{
     productoSeleccionado.value=product
@@ -137,32 +136,11 @@ const save=()=>{
     }
 }
 
-const exportRecipe = () => {
-  const rows: CatalogRow[] = recipe.value.map((item) => ({
-    id: item.product.id,
-    product: item.product.description,
-    quantity: item.quantity,
-    measureUnit: item.product.measureUnit,
-  }))
-
-  void exportar(
-    'pdf',
-    {
-      titulo: `Receta - ${name.value || 'Platillo'}`,
-      columns: recipeColumns,
-    },
-    async () => rows,
-  )
-}
-
 const confirmDelete = () => {
   console.log('Motivo de eliminación:', reason.value)
   reasonModalEnable.value = false
   emit('delete', reason.value)
 }
-
-onMounted(loadProducts)
-
 </script>
 
 <template>
@@ -176,7 +154,8 @@ onMounted(loadProducts)
 
     <!-- Modal de insertar / editar -->
     <div
-      v-if="!isDelete && !isAction" class="flex flex-col rounded-2xl shadow-2xl w-full max-w-xl bg-neutral-50 overflow-hidden" style="max-height: 92vh;">
+      v-if="!isDelete && !isAction" 
+      class="flex flex-col rounded-2xl shadow-2xl w-full max-w-xl bg-neutral-50 overflow-hidden" style="max-height: 92vh;">
       <!-- Encabezado del modal-->
       <div class="border-b border-neutral-200 p-4">
         <h1 class="text-secondary-800 text-2xl font-bold">
@@ -312,12 +291,12 @@ onMounted(loadProducts)
                           </tr>
                       </thead>
                       <tbody>
-                            <tr v-for="(item, index) in recipe" :key="item.product?.id ?? index" class="border-t border-neutral-200">
-                              <td class="px-4 py-3">{{item.product?.description ?? 'Producto no disponible'}}</td>
+                          <tr v-for="item in recipe" :key="item.product.id" class="border-t border-neutral-200">
+                              <td class="px-4 py-3">{{item.product.description}}</td>
                               <td class="px-4 py-3 text-center">{{item.quantity}}</td>
-                              <td class="px-4 py-3">{{item.product?.measureUnit ?? '—'}}</td>
+                              <td class="px-4 py-3">{{item.product.measureUnit}}</td>
                               <td class="px-4 py-3 text-center">
-                                <button v-if="!isAction && item.product"
+                                  <button v-if="!isAction" 
                                     type="button" 
                                     class="text-red-500 hover:text-red-700" 
                                     @click="deleteProducts(item.product.id)">
@@ -343,9 +322,9 @@ onMounted(loadProducts)
                         v-model="productSearch" 
                         type="text" placeholder="Buscar producto..." 
                         class="w-full px-4 py-3 border rounded-xl"/>
-                      <div v-if="filterProducts.length>0" class="absolute z-20 w-full bottom-full mb-1 bg-white border rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                      <div v-if="products.length > 0" class="absolute z-20 w-full bottom-full mb-1 bg-white border rounded-xl shadow-lg max-h-40 overflow-y-auto">
                           <button 
-                            v-for="product in filterProducts" 
+                            v-for="product in products" 
                             :key="product.id" 
                             type="button" 
                             class="w-full text-left px-4 py-2 hover:bg-neutral-100" 
@@ -367,13 +346,11 @@ onMounted(loadProducts)
                 </button>
                 <button
                   v-if="isAction"
-                  :disabled="exportando"
                   class="w-full max-w-50 bg-primary-600 hover:bg-primary-500 active:bg-primary-400 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed
                   flex flex-row gap-2 justify-center"
-                  @click="exportRecipe"
                 >
                   <FileText :size="24" class=" text-neutral-50"/>
-                  {{ exportando ? 'Generando PDF...' : 'Exportar PDF' }}
+                  Exportar PDF
                 </button>
               </div>
           </div>
