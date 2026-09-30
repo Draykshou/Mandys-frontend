@@ -139,6 +139,7 @@ const deleteRow = async () => {
     
   } catch (err) {
     console.error("No se pudo crear el producto:", err)
+    modalDeleteEnable.value = false
     mostrarToast(obtenerMensajeError(err,'No se pudo eliminar el Producto.'),'error')
   }
 }

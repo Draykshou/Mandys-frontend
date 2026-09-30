@@ -35,7 +35,8 @@ const CustomerColumn: CatalogoDef = {
     { key: 'email', label: 'Correo electrónico', type: 'text' },
     { key: 'firstName', label: 'Nombre', type: 'text' },
     { key: 'lastName', label: 'Apellido', type: 'text' },
-    { key: 'hasLogin', label: 'Tiene acceso', type: 'boolean' },
+    { key: 'hasLogin', label: 'Activo', type: 'boolean' },
+    { key: 'Puntos', label: 'Puntos de fidelidad', type: 'text' },
   ],
 }
 
@@ -179,6 +180,7 @@ onMounted(() => loadCustomers())
     <div class="flex flex-1 flex-col overflow-hidden">
       <main class="flex-1 overflow-y-auto px-8 py-8">
         <CatalogHeader
+          :is-customer="true"
           :titulo="CustomerColumn.titulo"
           :subtitulo="CustomerColumn.subtitulo"
           :texto-boton="CustomerColumn.textoBoton"
@@ -194,6 +196,7 @@ onMounted(() => loadCustomers())
         />
 
         <CatalogTable
+          :is-customer="true"
           :titulo="CustomerColumn.titulo"
           :columns="CustomerColumn.columns"
           :rows="customers?.items ?? []"
