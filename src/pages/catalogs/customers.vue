@@ -10,6 +10,7 @@ import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import CustomersModals from '@/components/modals/CustomersModals.vue'
 import { useToast } from '@/composables/useToast'
+import { useExportCatalog } from '@/composables/useExportCatalog'
 
 import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 import type { Customer, Customers, RegisterCustomer, UpdateCustomer} from '@/types/CustomersDtos'
@@ -141,7 +142,32 @@ const updateRow = async (
 const deleteRow = async () => {
 }
 
+/** Tamaño de página para traer el catálogo completo antes de generar el archivo. */
+const PAGE_SIZE_EXPORT = 100
+
+/** Recorre todas las páginas con `getCustomers` para que el Excel no se corte en la primera. */
+const cargarCatalogo = async () => {
+  const primera = await getCustomers(1, PAGE_SIZE_EXPORT, '')
+  const items = [...primera.items]
+  for (let pagina = 2; pagina <= primera.totalPages; pagina++) {
+    const siguiente = await getCustomers(pagina, PAGE_SIZE_EXPORT, '')
+    if (siguiente.items.length === 0) break
+    items.push(...siguiente.items)
+  }
+  return items
+}
+
+const { exportar } = useExportCatalog()
+
 const exportTable = () => {
+  void exportar(
+    'excel',
+    {
+      columns: CustomerColumn.columns,
+      titulo: CustomerColumn.titulo,
+    },
+    cargarCatalogo,
+  )
 }
 
 const loadCustomers = async (pagina = 1) => {

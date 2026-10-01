@@ -9,6 +9,7 @@ import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import CombosModals from '@/components/modals/CombosModals.vue'
 import { useToast } from '@/composables/useToast'
+import { useExportCatalog } from '@/composables/useExportCatalog'
 import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 import type { Combo, Combos, CreateCombo, UpdateCombo } from '@/types/CombosDtos'
 import { postCombo, putCombo, deleteCombo, getCombos } from '@/service/CombosService'
@@ -153,7 +154,32 @@ const changePage = async (page: number) => {
   await loadCombos(page)
 }
 
+/** Tamaño de página para traer el catálogo completo antes de generar el archivo. */
+const PAGE_SIZE_EXPORT = 100
+
+/** Recorre todas las páginas con `getCombos` para que el Excel no se corte en la primera. */
+const cargarCatalogo = async () => {
+  const primera = await getCombos(1, PAGE_SIZE_EXPORT, '', 'name')
+  const items = [...primera.items]
+  for (let pagina = 2; pagina <= primera.totalPages; pagina++) {
+    const siguiente = await getCombos(pagina, PAGE_SIZE_EXPORT, '', 'name')
+    if (siguiente.items.length === 0) break
+    items.push(...siguiente.items)
+  }
+  return items
+}
+
+const { exportar } = useExportCatalog()
+
 const exportTable = () => {
+  void exportar(
+    'excel',
+    {
+      columns: CombosColumn.columns,
+      titulo: CombosColumn.titulo,
+    },
+    cargarCatalogo,
+  )
 }
 
 const loadCombos = async (p = 1) => {

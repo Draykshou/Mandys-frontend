@@ -36,7 +36,7 @@ const props = withDefaults(
     isCustomer?: boolean
   }>(),
   {
-    isCustomer: false
+    isCustomer: false,
   },
 )
 

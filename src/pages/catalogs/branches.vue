@@ -10,6 +10,7 @@ import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import BranchesModals from '@/components/modals/BranchesModals.vue'
 import { useToast } from '@/composables/useToast'
+import { useExportCatalog } from '@/composables/useExportCatalog'
 
 import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 import type { Branch, Branches, CreateBranch, UpdateBranch } from '@/types/BranchesDtos'
@@ -153,7 +154,32 @@ const deleteRow = async (reason: string) => {
   }
 }
 
+/** Tamaño de página para traer el catálogo completo antes de generar el archivo. */
+const PAGE_SIZE_EXPORT = 100
+
+/** Recorre todas las páginas con `getBranches` para que el Excel no se corte en la primera. */
+const cargarCatalogo = async () => {
+  const primera = await getBranches(1, PAGE_SIZE_EXPORT, '', 'name')
+  const items = [...primera.items]
+  for (let pagina = 2; pagina <= primera.totalPages; pagina++) {
+    const siguiente = await getBranches(pagina, PAGE_SIZE_EXPORT, '', 'name')
+    if (siguiente.items.length === 0) break
+    items.push(...siguiente.items)
+  }
+  return items
+}
+
+const { exportar } = useExportCatalog()
+
 const exportTable = () => {
+  void exportar(
+    'excel',
+    {
+      columns: BranchColumn.columns,
+      titulo: BranchColumn.titulo,
+    },
+    cargarCatalogo,
+  )
 }
 
 const loadBranches = async (pagina = 1) => {

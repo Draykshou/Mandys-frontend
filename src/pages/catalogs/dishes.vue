@@ -149,8 +149,19 @@ const changePage = async (page: number) => {
   await loadDishes(page)
 }
 
-/** `getDishes` ya devuelve el catálogo tal como lo muestra la tabla. */
-const cargarCatalogo = async () => (await getDishes()).items
+/** `getDishes` pagina en servidor: recorre todas las páginas para no cortar el Excel. */
+const PAGE_SIZE_EXPORT = 100
+
+const cargarCatalogo = async () => {
+  const primera = await getDishes(1, PAGE_SIZE_EXPORT, '', 'name')
+  const items = [...primera.items]
+  for (let pagina = 2; pagina <= primera.totalPages; pagina++) {
+    const siguiente = await getDishes(pagina, PAGE_SIZE_EXPORT, '', 'name')
+    if (siguiente.items.length === 0) break
+    items.push(...siguiente.items)
+  }
+  return items
+}
 
 const { exportando, exportar } = useExportCatalog()
 
