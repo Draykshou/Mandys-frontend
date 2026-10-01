@@ -19,10 +19,6 @@ export function formatCurrency(valor: unknown): string {
   return Number.isFinite(numero) ? MONEDA.format(numero) : String(valor)
 }
 
-/**
- * Convierte a número aunque venga con símbolo o separadores ("$1,250.50" -> 1250.5).
- * Si no hay número que leer, devuelve 0.
- */
 export function toNumber(valor: unknown): number {
   if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0
 

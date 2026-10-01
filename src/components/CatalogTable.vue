@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 import { formatCurrency } from '@/utils/format'
-import { Sheet, Pencil, Trash, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { Sheet, Pencil, Trash, ChevronLeft, ChevronRight, Ban } from 'lucide-vue-next'
 import { animate } from 'animejs'
 
 const onBeforeEnter = (el: Element) => {
@@ -33,16 +33,17 @@ const props = withDefaults(
     totalRegistros: number
     pagina: number
     totalPaginas: number
+    isCustomer?: boolean
   }>(),
   {
-    
+    isCustomer: false
   },
 )
 
 const emit = defineEmits<{
   editar: [row: CatalogRow]
   eliminar: [row: CatalogRow]
-  accion: [payload: { columnKey: string; row: CatalogRow }]
+  accion: [row: CatalogRow]
   'cambiar-pagina': [pagina: number]
   exportar: []
 }>()
@@ -128,7 +129,7 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
                 type="button"
                 class="rounded-xl border px-3.5 py-1.5 text-caption font-semibold transition-colors"
                 :class="variantesBoton[col.buttonVariant ?? 'outlined']"
-                @click="emit('accion', { columnKey: col.key, row })"
+                @click="emit('accion', row)"
               >
                 {{ col.buttonLabel ?? 'Ver' }}
               </button>
@@ -138,8 +139,9 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
             <td class="px-6 py-4">
               <div class="flex items-center justify-end gap-2">
                 <button
+                  v-if="!isCustomer"
                   type="button"
-                  class="action-button hover:bg-primary-100 hover:text-primary-700 active:bg-primary-200"
+                  class="action-button hover:bg-blue-100 hover:text-blue-700 active:bg-blue-200"
                   title="Editar"
                   aria-label="Editar"
                   @click="emit('editar', row)"
@@ -149,11 +151,18 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
                 <button
                   type="button"
                   class="action-button hover:bg-red-100 hover:text-red-600 active:bg-red-200"
-                  title="Eliminar"
+                  :title="!isCustomer ? 'Eliminar' : 'Banear' "
                   aria-label="Eliminar"
                   @click="emit('eliminar', row)"
                 >
-                  <Trash :size="18" />
+                  <Trash 
+                    v-if="!isCustomer"
+                    :size="18" 
+                  />
+                  <Ban
+                    v-else
+                    :size="18"
+                  />
                 </button>
               </div>
             </td>

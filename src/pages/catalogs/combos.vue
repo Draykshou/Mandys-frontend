@@ -9,31 +9,11 @@ import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import CombosModals from '@/components/modals/CombosModals.vue'
 import { useToast } from '@/composables/useToast'
-import type { ToastTipo } from '@/types/Toast'
 import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 import type { Combo, Combos, CreateCombo, UpdateCombo } from '@/types/CombosDtos'
-import { CheckCircle, Trash2, AlertCircle } from 'lucide-vue-next'
 import { postCombo, putCombo, deleteCombo, getCombos } from '@/service/CombosService'
 
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
-
-const ESTILOS: Record<ToastTipo, { icono: Component; caja: string; barra: string }> = {
-  exito: {
-    icono: CheckCircle,
-    caja: 'border-green-200 bg-green-50 text-green-900',
-    barra: 'bg-green-500',
-  },
-  eliminar: {
-    icono: Trash2,
-    caja: 'border-red-200 bg-red-50 text-red-900',
-    barra: 'bg-red-500',
-  },
-  error: {
-    icono: AlertCircle,
-    caja: 'border-red-200 bg-red-50 text-red-900',
-    barra: 'bg-red-500',
-  },
-}
 
 interface CatalogoDef {
   titulo: string
@@ -51,11 +31,9 @@ const CombosColumn: CatalogoDef = {
   textoBoton: 'Agregar Combo',
   categorias: ['Todos'],
   columns: [
-    { key: 'id', label: 'ID', type: 'text' },
     { key: 'name', label: 'Nombre', type: 'text' },
     { key: 'price', label: 'Precio', type: 'currency' },
-    { key: 'dishes', label: 'Platillos', type: 'button' },
-    { key: 'products', label: 'Productos', type: 'button' },
+    { key: 'dishes', label: 'Cotenido', type: 'button' },
   ],
 }
 
@@ -78,6 +56,7 @@ function search() {
 const modalInsertEnable = ref(false)
 const modalUpdateEnable = ref(false)
 const modalDeleteEnable = ref(false)
+const modalActionEnable = ref(false)
 
 const currentRow = ref<Combo | null>(null)
 
@@ -116,6 +95,7 @@ const loadRowInformation = (row: CatalogRow) => {
 
 const openModalUpdate = (row: CatalogRow) => {
   loadRowInformation(row)
+  console.log(row)
   modalUpdateEnable.value = true
 }
 
@@ -140,7 +120,7 @@ const updateRow = async (
   try {
     await putCombo(currentRow.value.id, combo)
     modalUpdateEnable.value = false
-    mostrarToast('Combo actualizado correctamente.', 'exito')
+    mostrarToast('Combo actualizado correctamente.', 'actualizar')
     await loadCombos()
   } catch (err) {
     console.error('No se pudo actualizar el combo:', err)
@@ -154,7 +134,7 @@ const deleteRow = async (reason: string) => {
   try {
     await deleteCombo(currentRow.value.id)
     modalDeleteEnable.value = false
-    mostrarToast('Combo eliminado correctamente.', 'exito')
+    mostrarToast('Combo eliminado correctamente.', 'eliminar')
     await loadCombos()
   } catch (err) {
     console.error('No se pudo eliminar el combo:', err)
@@ -162,14 +142,25 @@ const deleteRow = async (reason: string) => {
   }
 }
 
+const seeContent = (row: CatalogRow) => {
+  console.log("llega aquí", row)
+  loadRowInformation(row)
+  modalActionEnable.value = true
+  console.log(modalActionEnable.value)
+}
+
+const changePage = async (page: number) => {
+  await loadCombos(page)
+}
+
 const exportTable = () => {
 }
 
-const loadCombos = async () => {
+const loadCombos = async (p = 1) => {
   try {
-    combos.value = await getCombos()
+    combos.value = await getCombos(p, 5, '', "name")
     page.value = combos.value.page
-    totalPages.value = combos.value.totalPage
+    totalPages.value = combos.value.totalPages
     console.log(combos.value)
   } catch (err) {
     console.error('No se pudieron cargar los combos:', err)
@@ -217,8 +208,9 @@ onMounted(loadCombos)
           :total-paginas="totalPages"
           @editar="openModalUpdate"
           @eliminar="openModalDelete"
+          @accion="seeContent"
           @exportar="exportTable"
-          @cambiar-pagina="(p) => (page = p)"
+          @cambiar-pagina="changePage"
         />
         <CombosModals
           v-if="modalInsertEnable"
@@ -243,6 +235,14 @@ onMounted(loadCombos)
           @close="modalDeleteEnable = false"
           @delete="deleteRow"
         />
+
+        <CombosModals
+          v-if="modalActionEnable"
+          :is-action="true"
+          @close="modalActionEnable = false"
+          :combo="currentRow ?? undefined"
+        />
+
         <AppToast
           :visible="toast.visible"
           :mensaje="toast.mensaje"

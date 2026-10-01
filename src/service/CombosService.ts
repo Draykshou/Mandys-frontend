@@ -1,9 +1,21 @@
 import { api } from "@/lib/api-client"
 import type { Combo, Combos, CreateCombo, UpdateCombo } from "@/types/CombosDtos"
 
-export async function getCombos(): Promise<Combos>{
-    const response = await api.get<Combos>("/combos")
-    return response.data as Combos
+export async function getCombos(
+    page = 1,
+    pageSize = 20,
+    search = '',
+    orderBy = ''
+) {
+    const response = await api.get<Combos>('/combos', {
+        params: {
+            page,
+            pageSize,
+            search: search || undefined,
+            orderBy
+        }
+    })
+    return response.data
 }
 
 export async function postCombo(payload: CreateCombo): Promise<Combo> {
@@ -11,7 +23,6 @@ export async function postCombo(payload: CreateCombo): Promise<Combo> {
     return response.data
 }
 
-/** El update reemplaza el combo completo, por eso manda el mismo cuerpo que el alta. */
 export async function putCombo(id: number, payload: UpdateCombo): Promise<Combo> {
     const response = await api.put<Combo>(`/combos/${id}`, payload)
     return response.data

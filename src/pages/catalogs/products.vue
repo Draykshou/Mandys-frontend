@@ -8,6 +8,7 @@ import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import { useToast } from '@/composables/useToast'
+import { useExportCatalog } from '@/composables/useExportCatalog'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
 import ProductsModals from '@/components/modals/ProductsModals.vue'
 
@@ -78,14 +79,13 @@ const insertRow = async (description: string, isSupply: boolean, salePrice: numb
   console.log("insert call")
 
   try {
-    const response = await postProduct(product)
+    await postProduct(product)
     modalInsertEnable.value = false
     mostrarToast('Producto agregado correctamente.','exito')
-    console.log(response)
     await loadProducts()
   } catch (err) {
     console.error("No se pudo crear el producto:", err)
-    mostrarToast(obtenerMensajeError(err,'No se pudo crear el platillo.'),'error')
+    mostrarToast(obtenerMensajeError(err,'No se pudo crear el Producto.'),'error')
   }
 }
 
@@ -120,23 +120,28 @@ const updateRow = async (description: string, isSupply: boolean, salePrice: numb
   }
   console.log("update call")
   try {
-    const response = await putProduct(currentRow.value?.id as number, product)
+    await putProduct(currentRow.value?.id as number, product)
     modalUpdateEnable.value = false
-    mostrarToast('Producto agregado correctamente.','exito')
-    console.log(response)
+    mostrarToast('Producto actualizado correctamente.','actualizar')
+    await loadProducts()
     
   } catch (err) {
     console.error("No se pudo actualizar el producto:", err)
+    mostrarToast(obtenerMensajeError(err,'No se pudo actualizar el Producto.'),'error')
   }
 }
 
 const deleteRow = async () => {
   try {
-    const response = await deleteProduct(currentRow.value?.id as number)
-    console.log(response)
-    window.location.reload()
+    await deleteProduct(currentRow.value?.id as number)
+    modalDeleteEnable.value = false
+    mostrarToast('Producto eliminado correctamente.','eliminar')
+    await loadProducts()
+    
   } catch (err) {
     console.error("No se pudo crear el producto:", err)
+    modalDeleteEnable.value = false
+    mostrarToast(obtenerMensajeError(err,'No se pudo eliminar el Producto.'),'error')
   }
 }
 
@@ -144,14 +149,43 @@ const changePage = async (page: number) => {
   await loadProducts(page)
 }
 
+/** Tamaño de página para traer el catálogo completo antes de generar el archivo. */
+const PAGE_SIZE_EXPORT = 100
+
+/**
+ * Productos es el único catálogo cuya vista sí pagina en servidor, así que
+ * recorre todas las páginas con `getProducts` para que el archivo no se corte
+ * en la primera. Se repiten el orden y el filtro de insumo que usa la tabla.
+ */
+const cargarCatalogo = async () => {
+  const primera = await getProducts(1, PAGE_SIZE_EXPORT, '', 'description', null)
+  const items = [...primera.items]
+  for (let pagina = 2; pagina <= primera.totalPages; pagina++) {
+    const siguiente = await getProducts(pagina, PAGE_SIZE_EXPORT, '', 'description', null)
+    // Si una página viene vacía no hay nada más que traer; seguir insistiendo
+    // solo gastaría requests.
+    if (siguiente.items.length === 0) break
+    items.push(...siguiente.items)
+  }
+  return items
+}
+
+const { exportando, exportar } = useExportCatalog()
+
 const exportTable = () => {
-  
+  void exportar(
+    'excel',
+    {
+      columns: productsColumn.columns,
+      titulo: productsColumn.titulo,
+    },
+    cargarCatalogo,
+  )
 }
 
 const loadProducts = async (p = 1) => {
   try{
     products.value = await getProducts(p, 20, "", "description", null)
-
     page.value = products.value.page
     totalPages.value = products.value.totalPages
   }
@@ -202,8 +236,10 @@ onMounted(loadProducts)
           :columns="productsColumn.columns"
           :rows="products?.items ?? []"
           :total-registros="products?.totalCount ?? 0"
-          :pagina="Number(products?.page)"
-          :total-paginas="Number(products?.totalPages)"
+          :pagina="page"
+          :total-paginas="totalPages"
+          formato-export="excel"
+          :exportando="exportando"
           @editar="openModalUpdate"
           @eliminar="openModalDelete"
           @exportar="exportTable"

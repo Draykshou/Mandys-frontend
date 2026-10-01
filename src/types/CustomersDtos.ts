@@ -1,24 +1,16 @@
 export interface Customer{
     id: number
     firstName: string
-    lastname: string
+    lastName: string
     email: string
-    password: string
     hasLogin: boolean
-    bannedAt: string
 }
 
 export interface RegisterCustomer{
     firstName: string
-    lastname: string
+    lastName: string
     email: string
     password: string
-}
-
-export interface CreateCustomer{
-    firstName: string
-    lastname: string
-    email: string
 }
 
 export interface UpdateCustomer{
@@ -31,6 +23,6 @@ export interface Customers{
     totalCount: number
     page: number
     pageSize: number
-    totalPage: number
+    totalPages: number
     items: Customer[]
 }
