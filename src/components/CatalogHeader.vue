@@ -37,6 +37,5 @@ const emit = defineEmits<{
       <Plus :size="20" class="text-(--neutral)"/>
       {{ props.textoBoton }}
     </button>
-    </div>
   </div>
 </template>

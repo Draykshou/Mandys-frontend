@@ -10,11 +10,11 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { BookOpen, ChefHat, DollarSign, Info, Trash2 } from 'lucide-vue-next'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import FormField from '@/components/ui/FormField.vue'
-import { createDish, updateDish } from '@/service/DishesService'
+import { postDish as createDish, putDish as updateDish } from '@/service/DishesService'
 import { getProducts } from '@/service/ProductsService'
 import { mensajeDeError } from '@/utils/apiError'
 import { toNumber } from '@/utils/format'
-import type { CreateDish, Dish, Recipe } from '@/types/DishesDtos'
+import type { CreateDish, Dish } from '@/types/DishesDtos'
 import type { Product } from '@/types/ProductsDtos'
 
 const LIMITE_NOMBRE = 50
@@ -37,7 +37,7 @@ const form = reactive({
 })
 
 /** El DTO declara un solo insumo, con su cantidad. */
-const insumo = reactive({ productId: '', quantity: null as number | null })
+const insumo = reactive({ productId: '' as number | '', quantity: null as number | null })
 
 const errors = reactive({ name: '', price: '', insumo: '' })
 
@@ -69,8 +69,8 @@ function reiniciar() {
 
   form.name = dish?.name ?? ''
   form.price = dish ? toNumber(dish.price) : null
-  insumo.productId = dish?.recipe?.id ?? ''
-  insumo.quantity = dish?.recipe?.quantity ?? null
+  insumo.productId = dish?.recipe?.[0]?.product?.id ?? ''
+  insumo.quantity = dish?.recipe?.[0]?.quantity ?? null
 
   Object.assign(errors, { name: '', price: '', insumo: '' })
   errorMsg.value = ''
@@ -88,7 +88,7 @@ watch(
 async function cargarProductos() {
   try {
     loadingProducts.value = true
-    availableProducts.value = (await getProducts()).items ?? []
+    availableProducts.value = (await getProducts(1, 100, '', 'description', true)).items ?? []
   } catch (err) {
     console.error('No se pudieron cargar los insumos:', err)
   } finally {
@@ -126,16 +126,15 @@ function validar(): boolean {
 
 // --- Guardar ----------------------------------------------------------------
 /** Arma el insumo con los datos del producto elegido más la cantidad. */
-function armarReceta(): Recipe {
+function armarReceta(): CreateDish['recipe'] {
   const producto = productoElegido.value
-  return {
-    id: producto?.id ?? '',
-    description: producto?.description ?? '',
-    isSupply: producto?.isSupply ?? true,
-    price: producto?.price ?? '',
-    measureUnit: producto?.measureUnit ?? '',
-    quantity: toNumber(insumo.quantity),
-  }
+  if (!producto || insumo.productId === '') return []
+  return [
+    {
+      productId: producto.id,
+      quantity: toNumber(insumo.quantity),
+    },
+  ]
 }
 
 async function guardar() {
@@ -144,8 +143,7 @@ async function guardar() {
   saving.value = true
   errorMsg.value = ''
 
-  // El DTO tipa price como boolean, pero el valor que maneja y espera la API es un número.
-  const precio = Number(form.price) as unknown as boolean
+  const precio = Number(form.price)
 
   const payload: CreateDish = {
     name: form.name.trim(),

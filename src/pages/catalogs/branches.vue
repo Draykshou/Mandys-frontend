@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted, type Component } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import axios from 'axios'
 
 import AppHeader from '@/components/AppHeader.vue'
@@ -11,33 +11,12 @@ import CatalogTable from '@/components/CatalogTable.vue'
 import BranchesModals from '@/components/modals/BranchesModals.vue'
 import { useToast } from '@/composables/useToast'
 
-import type { ToastTipo } from '@/types/Toast'
 import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 import type { Branch, Branches, CreateBranch, UpdateBranch } from '@/types/BranchesDtos'
-
-import { CheckCircle, Trash2, AlertCircle } from 'lucide-vue-next'
 
 import { postBranch, putBranch, deleteBranch, getBranches} from '@/service/BranchesService'
 
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
-
-const ESTILOS: Record<ToastTipo, { icono: Component; caja: string; barra: string }> = {
-  exito: {
-    icono: CheckCircle,
-    caja: 'border-green-200 bg-green-50 text-green-900',
-    barra: 'bg-green-500',
-  },
-  eliminar: {
-    icono: Trash2,
-    caja: 'border-red-200 bg-red-50 text-red-900',
-    barra: 'bg-red-500',
-  },
-  error: {
-    icono: AlertCircle,
-    caja: 'border-red-200 bg-red-50 text-red-900',
-    barra: 'bg-red-500',
-  },
-}
 
 interface CatalogoDef {
   titulo: string

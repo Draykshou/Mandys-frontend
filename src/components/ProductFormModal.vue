@@ -10,7 +10,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { DollarSign, Package } from 'lucide-vue-next'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import FormField from '@/components/ui/FormField.vue'
-import { createProduct, updateProduct } from '@/service/ProductsService'
+import { postProduct as createProduct, putProduct as updateProduct } from '@/service/ProductsService'
 import { mensajeDeError } from '@/utils/apiError'
 import { toNumber } from '@/utils/format'
 import type { CreateProduct, Product } from '@/types/ProductsDtos'
@@ -64,7 +64,7 @@ function reiniciar() {
 
   form.description = product?.description ?? ''
   form.isSupply = product?.isSupply ?? true
-  form.price = product ? toNumber(product.price) : null
+  form.price = product ? toNumber(product.salePrice) : null
   form.measureUnit = product?.measureUnit ?? 'kg'
   Object.assign(errors, { description: '', price: '' })
   errorMsg.value = ''
@@ -104,11 +104,11 @@ async function guardar() {
   saving.value = true
   errorMsg.value = ''
 
-  // El DTO tipa price como string, por eso el precio va convertido a texto.
+  // CreateProduct.salePrice es number, así que el precio va como número.
   const payload: CreateProduct = {
     description: form.description.trim(),
     isSupply: form.isSupply,
-    price: String(form.price),
+    salePrice: Number(form.price),
     measureUnit: form.measureUnit,
   }
 

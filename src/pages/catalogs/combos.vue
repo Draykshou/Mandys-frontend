@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted, type Component } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import axios from 'axios'
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'

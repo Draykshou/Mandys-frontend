@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted, type Component } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import axios from 'axios'
 
 import AppHeader from '@/components/AppHeader.vue'
@@ -16,7 +16,6 @@ import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
 import type { CreateDish, Dish, Dishes, UpdateDish } from '@/types/DishesDtos'
 
 import { postDish, putDish, deleteDish, getDishes } from '@/service/DishesService'
-import ActionModal from '@/components/ActionModal.vue'
 
 
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()

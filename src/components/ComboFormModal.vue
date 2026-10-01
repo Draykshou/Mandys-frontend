@@ -10,7 +10,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { DollarSign, Info, Package, Trash2 } from 'lucide-vue-next'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import FormField from '@/components/ui/FormField.vue'
-import { createCombo, updateCombo } from '@/service/CombosService'
+import { postCombo as createCombo, putCombo as updateCombo } from '@/service/CombosService'
 import { getDishes } from '@/service/DishesService'
 import { mensajeDeError } from '@/utils/apiError'
 import { formatCurrency, toNumber } from '@/utils/format'
@@ -37,7 +37,7 @@ const form = reactive({
 })
 
 /** El DTO declara un solo platillo, con la cantidad en la que va en el combo. */
-const platillo = reactive({ dishId: '', quantity: null as number | null })
+const platillo = reactive({ dishId: '' as number | '', quantity: null as number | null })
 
 const errors = reactive({ name: '', price: '', platillo: '' })
 
@@ -70,8 +70,8 @@ function reiniciar() {
 
   form.name = combo?.name ?? ''
   form.price = combo ? toNumber(combo.price) : null
-  platillo.dishId = combo?.Dishes?.id ?? ''
-  platillo.quantity = combo?.Dishes?.quantity ?? null
+  platillo.dishId = combo?.dishes?.[0]?.dish?.id ?? ''
+  platillo.quantity = combo?.dishes?.[0]?.quantity ?? null
 
   Object.assign(errors, { name: '', price: '', platillo: '' })
   errorMsg.value = ''
@@ -127,23 +127,15 @@ function validar(): boolean {
 
 // --- Guardar ----------------------------------------------------------------
 /** Arma el platillo del combo con los datos delplatillo elegido más la cantidad. */
-function armarPlatillo(): CreateCombo['Dishes'] {
+function armarPlatillo(): CreateCombo['dishes'] {
   const dish = dishElegido.value
-  return {
-    id: dish?.id ?? '',
-    name: dish?.name ?? '',
-    // El DTO tipa price como boolean, pero el valor que maneja y espera la API es un número.
-    price: toNumber(dish?.price) as unknown as boolean,
-    recipe: dish?.recipe ?? {
-      id: '',
-      description: '',
-      isSupply: true,
-      price: '',
-      measureUnit: '',
-      quantity: 0,
+  if (!dish || platillo.dishId === '') return []
+  return [
+    {
+      dishId: dish.id,
+      quantity: toNumber(platillo.quantity),
     },
-    quantity: toNumber(platillo.quantity),
-  }
+  ]
 }
 
 async function guardar() {
@@ -152,13 +144,14 @@ async function guardar() {
   saving.value = true
   errorMsg.value = ''
 
-  // El DTO tipa price como boolean, pero el valor que maneja y espera la API es un número.
-  const precio = Number(form.price) as unknown as boolean
+  // El precio del combo es un número (ver CreateCombo.price).
+  const precio = Number(form.price)
 
   const payload: CreateCombo = {
     name: form.name.trim(),
     price: precio,
-    Dishes: armarPlatillo(),
+    dishes: armarPlatillo(),
+    products: [],
   }
 
   const editando = props.combo
