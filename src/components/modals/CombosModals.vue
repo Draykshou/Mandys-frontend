@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { DollarSign, OctagonAlert, Trash2 } from 'lucide-vue-next'
+import { DollarSign, OctagonAlert, Trash2, FileText } from 'lucide-vue-next'
 import type { Combo, CreateCombo, UpdateCombo } from '@/types/CombosDtos'
 import type { Dish } from '@/types/DishesDtos'
 import type { Product } from '@/types/ProductsDtos'
@@ -248,6 +248,51 @@ const changeDeleteModal = () => {
   firstDeleteModel.value = false
 }
 
+const exportarPdf = async () => {
+  const { jsPDF } = await import('jspdf')
+  const { autoTable } = await import('jspdf-autotable')
+  const { PDF_HEADER_FILL, pintarLogoMandys } = await import('@/utils/pdfBranding')
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
+
+  // Logo de Mandy's en el header superior derecho.
+  await pintarLogoMandys(doc)
+
+  doc.setFontSize(14)
+  doc.text(`Contenido del combo: ${name.value || 'Combo'}`, 40, 40)
+  doc.setFontSize(10)
+  doc.setTextColor(110, 110, 110)
+  doc.text(`Precio: $${Number(price.value ?? 0).toFixed(2)}`, 40, 58)
+  doc.text(`Exportado el ${new Date().toLocaleDateString('es-MX')}`, 40, 72)
+
+  autoTable(doc, {
+    startY: 86,
+    head: [['Elemento', 'Tipo', 'Cantidad']],
+    body: comboItems.value.map((item) => [
+      item.name,
+      item.type === 'dish' ? 'Platillo' : 'Producto',
+      String(item.quantity),
+    ]),
+    styles: { fontSize: 9, cellPadding: 6, textColor: [30, 30, 30] },
+    headStyles: { fillColor: PDF_HEADER_FILL, textColor: [255, 255, 255], fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [245, 245, 245] },
+    margin: { left: 40, right: 40 },
+  })
+
+  const base = (name.value || 'combo')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  const blob = doc.output('blob')
+  const url = URL.createObjectURL(blob)
+  const enlace = document.createElement('a')
+  enlace.href = url
+  enlace.download = `${base || 'combo'}.pdf`
+  enlace.click()
+  setTimeout(() => URL.revokeObjectURL(url), 100)
+}
+
 
 onMounted(() => {
   loadComboItems()
@@ -475,8 +520,10 @@ onBeforeUnmount(() => {
             </button>
             <button
               v-if="isAction"
+              type="button"
               class="w-full max-w-50 bg-primary-600 hover:bg-primary-500 active:bg-primary-400 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed
               flex flex-row gap-2 justify-center"
+              @click="exportarPdf"
               >
               <FileText :size="24" class=" text-neutral-50"/>
                 Exportar PDF

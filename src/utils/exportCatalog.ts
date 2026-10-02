@@ -1,5 +1,6 @@
 import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 import { formatCurrency } from '@/utils/format'
+import { PDF_HEADER_FILL, pintarLogoMandys } from '@/utils/pdfBranding'
 
 export type FormatoExport = 'excel' | 'pdf'
 
@@ -105,6 +106,9 @@ export async function exportarAPdf(
   const columnas = columnasExportables(opciones.columns)
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
 
+  // Logo de Mandy's en el header superior derecho.
+  await pintarLogoMandys(doc)
+
   doc.setFontSize(14)
   doc.text(opciones.titulo, 40, 36)
   doc.setFontSize(9)
@@ -122,7 +126,7 @@ export async function exportarAPdf(
       ),
     ),
     styles: { fontSize: 8, cellPadding: 5, textColor: [30, 30, 30] },
-    headStyles: { fillColor: [22, 101, 52], textColor: [255, 255, 255], fontStyle: 'bold' },
+    headStyles: { fillColor: PDF_HEADER_FILL, textColor: [255, 255, 255], fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [245, 245, 245] },
     margin: { left: 40, right: 40 },
   })

@@ -134,7 +134,7 @@ const handleLogin = async () => {
 
     <!-- Bottom Footer -->
     <div class="absolute bottom-8 w-full flex justify-center text-[13px] text-stone-500 tracking-wide">
-      <div>© 2024 Mandy's POS & Operaciones Culinarias. Todos los derechos reservados.</div>
+      <div>© 2026 Mandy's POS & Operaciones Culinarias. Todos los derechos reservados.</div>
     </div>
   </div>
 </template>
