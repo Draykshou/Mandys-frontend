@@ -1,8 +1,8 @@
 <script setup lang="ts">
 
-import { ref,computed,onMounted } from 'vue'
-import { DollarSign,OctagonAlert,Trash2 } from 'lucide-vue-next'
-import type { Dish,Recipe,CreateDish,UpdateDish } from '@/types/DishesDtos'
+import { ref, computed, watch } from 'vue'
+import { DollarSign, OctagonAlert, Trash2, FileText } from 'lucide-vue-next'
+import type { Dish , Recipe, CreateDish, UpdateDish } from '@/types/DishesDtos'
 import type { Product } from '@/types/ProductsDtos'
 import { getProducts } from '@/service/ProductsService'
 import DeleteModal from '@/components/DeleteModal.vue'
@@ -12,61 +12,91 @@ const emit = defineEmits<{
   insert: [string, number, CreateDish['recipe']]
   update: [string, number, UpdateDish['recipe']]
   delete: [string]
+  action: []
 }>()
 
 const props = withDefaults(
   defineProps<{
     isInsert?: boolean
     isDelete?: boolean
+    isAction?: boolean
 
     modalTitle?: string
     modalSubtitle?: string
 
-    dish?:Dish
+    dish?: Dish
   }>(),
   {
     isInsert: false,
-    isDelete: false
+    isDelete: false,
+    isAction: false
   }
 )
 
 const name=ref(props.dish?.name??'')
 const price=ref<number|null>(props.dish?.price??null)
 const recipe=ref<Recipe[]>(props.dish?.recipe?[...props.dish.recipe]:[])
+
+
 const productoSeleccionado=ref<Product|null>(null)
-const products=ref<Product[]>([])
-const productSearch=ref('')
 const quantity=ref<number|null>(null)
+
+const products = ref<Product[]>([])
+const productSearch = ref('')
+const productLoading = ref(false)
 
 const reason = ref('')
 const recipeEnable = ref(false)
+const firstDeleteModel = ref(props.isDelete ?? '')
 const reasonModalEnable = ref(false)
 
 const validate = computed(() => {
   return (
     name.value.trim() !== '' &&
     price.value !== null &&
-    price.value >= 0
+    price.value >= 0 &&
+    recipe.value.length !== 0
   )
 })
 
-const filterProducts = computed ( ()=> {
-    const texto=productSearch.value.trim().toLowerCase()
-    if(!texto)return[]
-    return products.value.filter(product => product.description.toLowerCase().includes(texto))
-})
-const loadProducts=async()=>{
-    try{
-        const response=await getProducts()
-        products.value=response.items
-    }catch(err){
-        console.error('No se pudieron cargar los productos:',err)
+const searchProducts = async () => {
+    const search = productSearch.value.trim()
+
+    if (!search) {
+        products.value = []
+        return
+    }
+
+    try {
+        productLoading.value = true
+
+        const response = await getProducts(1, 20, search, 'description', true)
+        products.value = response.items
+    } catch (err) {
+        console.error('No se pudieron buscar los productos:', err)
+        products.value = []
+    } finally {
+        productLoading.value = false
     }
 }
+
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(productSearch, () => {
+    if (searchTimeout) {
+        clearTimeout(searchTimeout)
+    }
+
+    searchTimeout = setTimeout(() => {
+        searchProducts()
+    }, 300)
+})
+
 const selectProduct=(product:Product)=>{
     productoSeleccionado.value=product
     productSearch.value=product.description
 }
+
 const addProducts=()=>{
     if(!productoSeleccionado.value)return
     if(quantity.value===null||quantity.value<=0)return
@@ -88,6 +118,11 @@ const deleteProducts=(productId:number)=>{
     recipe.value = recipe.value.filter(item => item.product.id !== productId)
 }
 
+const changeDeleteModal = () => {
+  reasonModalEnable.value = true
+  firstDeleteModel.value = false
+}
+
 const save=()=>{
     if(price.value===null)return
     const recipeRequest=recipe.value.map(item=>({
@@ -106,9 +141,6 @@ const confirmDelete = () => {
   reasonModalEnable.value = false
   emit('delete', reason.value)
 }
-
-onMounted(loadProducts)
-
 </script>
 
 <template>
@@ -122,7 +154,8 @@ onMounted(loadProducts)
 
     <!-- Modal de insertar / editar -->
     <div
-      v-if="!isDelete" class="flex flex-col rounded-2xl shadow-2xl w-full max-w-xl bg-neutral-50 overflow-hidden" style="max-height: 92vh;">
+      v-if="!isDelete && !isAction" 
+      class="flex flex-col rounded-2xl shadow-2xl w-full max-w-xl bg-neutral-50 overflow-hidden" style="max-height: 92vh;">
       <!-- Encabezado del modal-->
       <div class="border-b border-neutral-200 p-4">
         <h1 class="text-secondary-800 text-2xl font-bold">
@@ -240,7 +273,7 @@ onMounted(loadProducts)
     </div>
 
     <!-- Modal de tabla -->
-    <div v-if="recipeEnable" class="flex flex-col w-full h-full max-h-150 max-w-2xl rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden ml-8">
+    <div v-if="recipeEnable || isAction" class="flex flex-col w-full h-full max-h-150 max-w-2xl rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden ml-8">
       <div class="border-b border-neutral-200 p-4 shrink-0">
           <h2 class="text-secondary-800 text-2xl font-bold">Receta</h2>
           <p class="text-neutral-700">Productos utilizados en el platillo</p>
@@ -263,7 +296,7 @@ onMounted(loadProducts)
                               <td class="px-4 py-3 text-center">{{item.quantity}}</td>
                               <td class="px-4 py-3">{{item.product.measureUnit}}</td>
                               <td class="px-4 py-3 text-center">
-                                  <button 
+                                  <button v-if="!isAction" 
                                     type="button" 
                                     class="text-red-500 hover:text-red-700" 
                                     @click="deleteProducts(item.product.id)">
@@ -279,17 +312,19 @@ onMounted(loadProducts)
               </div>
           </div>
       </div>
+
       <div class="p-6 pt-0 shrink-0">
           <div class="space-y-3">
               <div class="flex gap-3">
                   <div class="flex-1 relative">
                       <input 
+                        v-if="!isAction"
                         v-model="productSearch" 
                         type="text" placeholder="Buscar producto..." 
                         class="w-full px-4 py-3 border rounded-xl"/>
-                      <div v-if="filterProducts.length>0" class="absolute z-20 w-full bottom-full mb-1 bg-white border rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                      <div v-if="products.length > 0" class="absolute z-20 w-full bottom-full mb-1 bg-white border rounded-xl shadow-lg max-h-40 overflow-y-auto">
                           <button 
-                            v-for="product in filterProducts" 
+                            v-for="product in products" 
                             :key="product.id" 
                             type="button" 
                             class="w-full text-left px-4 py-2 hover:bg-neutral-100" 
@@ -298,22 +333,33 @@ onMounted(loadProducts)
                           </button>
                       </div>
                   </div>
-                  <input v-model="quantity" type="number" min="1" step="1" placeholder="Cantidad" class="w-32 px-4 py-3 border rounded-xl"/>
+                  <input v-if="!isAction" v-model="quantity" type="number" min="1" step="1" placeholder="Cantidad" class="w-32 px-4 py-3 border rounded-xl"/>
               </div>
-              <button 
-                type="button" 
-                class="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed" 
-                :disabled="!productoSeleccionado||quantity===null||quantity<=0" 
-                @click="addProducts">
-                Agregar producto
-              </button>
+              <div class="flex justify-center">
+                <button 
+                  v-if="!isAction"
+                  type="button" 
+                  class="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed" 
+                  :disabled="!productoSeleccionado||quantity===null||quantity<=0" 
+                  @click="addProducts">
+                  Agregar producto
+                </button>
+                <button
+                  v-if="isAction"
+                  class="w-full max-w-50 bg-primary-600 hover:bg-primary-500 active:bg-primary-400 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed
+                  flex flex-row gap-2 justify-center"
+                >
+                  <FileText :size="24" class=" text-neutral-50"/>
+                  Exportar PDF
+                </button>
+              </div>
           </div>
       </div>
     </div>
 
     <!-- Modal de eliminar -->
     <div
-      v-if="isDelete && !reasonModalEnable"
+      v-if="firstDeleteModel"
       class="w-full max-w-120 flex flex-col rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden m-8"
     >
 
@@ -358,7 +404,7 @@ onMounted(loadProducts)
                  active:bg-red-700 border-neutral-200
                  text-neutral-50 py-3 px-7
                  rounded-xl shadow-xl"
-          @click="reasonModalEnable = true"
+          @click="changeDeleteModal"
         >
           Confirmar
         </button>
@@ -366,7 +412,7 @@ onMounted(loadProducts)
     </div>
 
     <DeleteModal
-      :visible="reasonModalEnable"
+      v-if="reasonModalEnable"
       @cancelar="emit('close')"
       @confirmar="confirmDelete"
     />

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { getProducts } from '@/service/ProductsService'
 import type { Product } from '@/types/ProductsDtos'
-import type { CreateDish, UpdateDish, Dish } from '@/types/DishesDtos'
+import type { CreateDish, UpdateDish } from '@/types/DishesDtos'
 import { X, Plus, Trash2, BookOpen, AlertCircle, CheckCircle, Info, ChefHat, DollarSign, Loader2 } from 'lucide-vue-next'
 import type { CatalogRow} from '@/types/CatalogColumns/catalog'
 
@@ -25,7 +25,7 @@ const props = withDefaults(
 
 const name = ref('')
 const price = ref<number | null>(null)
-const recipe = ref<Array<{ productId: string; quantity: number | null }>>([])
+const recipe = ref<Array<{ productId: number | ''; quantity: number | null }>>([])
 const availableProducts = ref<Product[]>([])
 const loadingProducts = ref(false)
 const saving = ref(false)
@@ -38,7 +38,7 @@ const recipeErrors = ref<Record<number, { productId?: string; quantity?: string 
 const loadProducts = async () => {
   try {
     loadingProducts.value = true
-    const res = await getProducts()
+    const res = await getProducts(1, 100, '', 'description', true)
     console.log('[CreateDishModal] getProducts raw response:', res)
     console.log('[CreateDishModal] items:', res.items)
     availableProducts.value = res.items || []
@@ -52,7 +52,7 @@ const loadProducts = async () => {
 
 onMounted(loadProducts)
 
-const isProductUsed = (productId: string, rowIndex: number) =>
+const isProductUsed = (productId: number | '', rowIndex: number) =>
   recipe.value.some((r, i) => i !== rowIndex && r.productId === productId)
 
 const addIngredient = async () => {

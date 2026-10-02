@@ -1,8 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import CatalogoView from '@/views/CatalogoView.vue'
-import ProductCatalogView from '@/views/ProductsCatalogView.vue'
-import AppLayout from '@/components/Layouts/AppLayout.vue'
+import LoginView from '@/views/LoginView.vue'
 
 const router = createRouter({
     history: createWebHistory(),
@@ -10,19 +8,12 @@ const router = createRouter({
         {
             path: '/',
             name: 'Inicio',
-            component: CatalogoView
+            component: LoginView
         },
         {
-            path: '/app',
-            component: AppLayout,
-            children: [
-                {
-                    path: '/productos',
-                    name: 'productos',
-                    component: CatalogoView
-                }
-            ]
-            
+            path: '/productos',
+            name: 'productos',
+            component: LoginView
         }
     ]
 })
