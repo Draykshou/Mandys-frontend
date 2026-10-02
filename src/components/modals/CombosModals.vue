@@ -6,7 +6,7 @@ import type { Dish } from '@/types/DishesDtos'
 import type { Product } from '@/types/ProductsDtos'
 import { getProducts } from '@/service/ProductsService'
 import { getDishes } from '@/service/DishesService'
-import DeleteModal from '@/components/DeleteModal.vue'
+import DeleteModal from '@/components/modals/DeleteModal.vue'
 
 interface ComboItem {
   type: 'dish' | 'product'

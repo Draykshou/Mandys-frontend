@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import DeleteModal from '@/components/DeleteModal.vue'
+import DeleteModal from '@/components/modals/DeleteModal.vue'
 import { DollarSign,  OctagonAlert } from 'lucide-vue-next';
 
 const emit = defineEmits<{

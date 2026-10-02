@@ -27,14 +27,62 @@ function alternar() {
 }
 
 const menuItems = computed(() => [
-  { key: 'home', label: 'Inicio', icon: House, path: '/catalogs/home' },
-  { key: 'products', label: 'Productos', icon: Archive, path: '/catalogs/products' },
-  { key: 'dishes', label: 'Platillos', icon: ShoppingCart, path: '/catalogs/dishes' },
-  { key: 'combos', label: 'Combos', icon: ShoppingBasket, path: '/catalogs/combos' },
-  { key: 'storage', label: 'Almacén', icon: Warehouse, path: '/catalogs/storage' },
-  { key: 'branches', label: 'Sucursales', icon: Store, path: '/catalogs/branches' },
-  { key: 'customers', label: 'Clientes', icon: Users, path: '/catalogs/customers' },
+  {
+    key: 'home',
+    label: 'Inicio',
+    icon: House,
+    path: '/catalogs/home',
+    roles: ['Administrador', 'Gerente de Operaciones', 'Gerente Sucursal', 'Encargado de Almacen Central', 'Encargado de Almacen'],
+  },
+  {
+    key: 'products',
+    label: 'Productos',
+    icon: Archive,
+    path: '/catalogs/products',
+    roles: ['Administrador', 'Gerente de Operaciones', 'Encargado de Almacen Central'],
+  },
+  {
+    key: 'dishes',
+    label: 'Platillos',
+    icon: ShoppingCart,
+    path: '/catalogs/dishes',
+    roles: ['Administrador', 'Gerente de Operaciones'],
+  },
+  {
+    key: 'combos',
+    label: 'Combos',
+    icon: ShoppingBasket,
+    path: '/catalogs/combos',
+    roles: ['Administrador', 'Gerente de Operaciones'],
+  },
+  {
+    key: 'storage',
+    label: 'Almacén',
+    icon: Warehouse,
+    path: '/catalogs/storage',
+    roles: ['Administrador', 'Encargado de Almacen Central', 'Encargado de Almacen'],
+  },
+  {
+    key: 'branches',
+    label: 'Sucursales',
+    icon: Store,
+    path: '/catalogs/branches',
+    roles: ['Administrador', 'Gerente de Operaciones'],
+  },
+  {
+    key: 'customers',
+    label: 'Clientes',
+    icon: Users,
+    path: '/catalogs/customers',
+    roles: ['Administrador', 'Gerente de Operaciones', 'Gerente Sucursal'],
+  },
 ])
+
+const visibleMenuItems = computed(() => {
+  const role = rolUsuario.value
+
+  return menuItems.value.filter(item => item.roles.includes(role))
+})
 
 /** Datos reales de la sesión (useAuth); sin valores mock. */
 const nombreUsuario = computed(() => {
@@ -125,7 +173,7 @@ onBeforeUnmount(limpiarTemporizadorSalida)
       :class="abierto ? '' : 'pt-6'"
     >
       <button
-        v-for="item in menuItems"
+        v-for="item in visibleMenuItems"
         :key="item.key"
         type="button"
         :title="item.label"

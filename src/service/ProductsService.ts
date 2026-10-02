@@ -6,7 +6,7 @@ export async function getProducts(
     pageSize = 20,
     search = '',
     orderBy = '',
-    isSupply: boolean | null
+    isSupply: boolean | null = null
 ) {
     const response = await api.get<Products>('/products', {
         params: {

@@ -30,7 +30,7 @@ const CombosColumn: CatalogoDef = {
   titulo: 'Combos',
   subtitulo: 'Gestión de los combos del restaurante',
   textoBoton: 'Agregar Combo',
-  categorias: ['Todos'],
+  categorias: ['Alfabetico A-Z', 'Alfabetico Z-A', 'Mayor precio', 'Menor precio'],
   columns: [
     { key: 'name', label: 'Nombre', type: 'text' },
     { key: 'price', label: 'Precio', type: 'currency' },
@@ -51,7 +51,36 @@ function cleanFilter() {
   filtro.categoria = CombosColumn.categorias[0]
 }
 
-function search() {
+const search = async () => {
+  await loadCombos(1)
+}
+
+const getProductFilters = () => {
+  let orderBy = ''
+  switch (filtro.categoria) {
+    case 'Alfabetico A-Z':
+      orderBy = 'name'
+      break
+
+    case 'Alfabetico Z-A':
+      orderBy = '-name'
+      break
+
+    case 'Mayor precio':
+      orderBy = '-price'
+      break
+
+    case 'Menor precio':
+      orderBy = 'price'
+      break
+    default:
+      orderBy = 'name'
+      break
+  }
+
+  return {
+    orderBy
+  }
 }
 
 const modalInsertEnable = ref(false)
@@ -184,7 +213,9 @@ const exportTable = () => {
 
 const loadCombos = async (p = 1) => {
   try {
-    combos.value = await getCombos(p, 5, '', "name")
+    const { orderBy } = getProductFilters()
+
+    combos.value = await getCombos(p, 5, filtro.busqueda, orderBy)
     page.value = combos.value.page
     totalPages.value = combos.value.totalPages
     console.log(combos.value)

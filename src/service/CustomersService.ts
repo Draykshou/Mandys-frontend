@@ -4,13 +4,15 @@ import type { Customer, Customers, RegisterCustomer, UpdateCustomer } from "@/ty
 export async function getCustomers(
     page = 1,
     pageSize = 20,
-    search = ''
+    search = '',
+    orderBy = ''
 ) {
     const response = await api.get<Customers>('/customers', {
         params: {
             page,
             pageSize,
-            search: search || undefined
+            search: search || undefined,
+            orderBy,
         }
     })
     return response.data

@@ -5,7 +5,7 @@ import { DollarSign, OctagonAlert, Trash2, FileText } from 'lucide-vue-next'
 import type { Dish , Recipe, CreateDish, UpdateDish } from '@/types/DishesDtos'
 import type { Product } from '@/types/ProductsDtos'
 import { getProducts } from '@/service/ProductsService'
-import DeleteModal from '@/components/DeleteModal.vue'
+import DeleteModal from '@/components/modals/DeleteModal.vue'
 
 const emit = defineEmits<{
   close: []

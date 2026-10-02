@@ -13,9 +13,9 @@ import { useToast } from '@/composables/useToast'
 import { useExportCatalog } from '@/composables/useExportCatalog'
 
 import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
-import type { Customer, Customers, RegisterCustomer, UpdateCustomer} from '@/types/CustomersDtos'
+import type { Customer, Customers} from '@/types/CustomersDtos'
 
-import { postCustomer, putCustomer, getCustomers} from '@/service/CustomersService'
+import { deleteCustomer, getCustomers } from '@/service/CustomersService'
 
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
@@ -31,7 +31,7 @@ const CustomerColumn: CatalogoDef = {
   titulo: 'Clientes',
   subtitulo: 'Gestión de los clientes del restaurante',
   textoBoton: 'Agregar Cliente',
-  categorias: ['Todos'],
+  categorias: ['Alfabetico A-Z', 'Alfabetico Z-A'],
   columns: [
     { key: 'email', label: 'Correo electrónico', type: 'text' },
     { key: 'firstName', label: 'Nombre', type: 'text' },
@@ -56,41 +56,34 @@ function cleanFilter() {
   filtro.categoria = CustomerColumn.categorias[0]
 }
 
-function search() {
+const search = async () => {
+  await loadCustomers(1)
 }
 
-const modalInsertEnable = ref(false)
-const modalUpdateEnable = ref(false)
+const getProductFilters = () => {
+  let orderBy = ''
+  switch (filtro.categoria) {
+    case 'Alfabetico A-Z':
+      orderBy = 'lastName'
+      break
+
+    case 'Alfabetico Z-A':
+      orderBy = '-lastName'
+      break
+
+    default:
+      orderBy = 'lastName'
+      break
+  }
+
+  return {
+    orderBy
+  }
+}
+
 const modalDeleteEnable = ref(false)
 
 const currentRow = ref<Customer | null>(null)
-
-const insertRow = async (
-  firstName: string,
-  lastName: string,
-  email: string,
-  password: string
-) => {
-  const customer: RegisterCustomer = {
-    firstName,
-    lastName,
-    email,
-    password
-  }
-
-  try {
-    await postCustomer(customer)
-    modalInsertEnable.value = false
-    mostrarToast('Cliente creado correctamente.', 'exito')
-    await loadCustomers(page.value)
-  } catch (err) {
-    console.error('No se pudo crear el cliente:', err)
-    mostrarToast(
-      obtenerMensajeError(err, 'No se pudo crear el cliente.'),
-      'error'
-    )
-  }
-}
 
 const loadRowInformation = (row: CatalogRow) => {
   currentRow.value = {
@@ -102,44 +95,23 @@ const loadRowInformation = (row: CatalogRow) => {
   }
 }
 
-const openModalUpdate = (row: CatalogRow) => {
-  loadRowInformation(row)
-  modalUpdateEnable.value = true
-}
-
 const openModalDelete = (row: CatalogRow) => {
   loadRowInformation(row)
   modalDeleteEnable.value = true
 }
 
-const updateRow = async (
-  firstName: string,
-  lastName: string,
-  email: string
-) => {
+const deleteRow = async () => {
   if (!currentRow.value) return
 
-  const customer: UpdateCustomer = {
-    firstName,
-    lastName,
-    email
-  }
-
   try {
-    await putCustomer(currentRow.value.id, customer)
-    modalUpdateEnable.value = false
-    mostrarToast('Cliente actualizado correctamente.', 'exito')
+    await deleteCustomer(currentRow.value.id)
+    mostrarToast('Cliente eliminado correctamente', 'eliminar')
+    modalDeleteEnable.value = false
     await loadCustomers(page.value)
   } catch (err) {
-    console.error('No se pudo actualizar el cliente:', err)
-    mostrarToast(
-      obtenerMensajeError(err, 'No se pudo actualizar el cliente.'),
-      'error'
-    )
+    const mensajeError = obtenerMensajeError(err, 'No se pudo eliminar el cliente')
+    mostrarToast(mensajeError, 'error')
   }
-}
-
-const deleteRow = async () => {
 }
 
 /** Tamaño de página para traer el catálogo completo antes de generar el archivo. */
@@ -172,7 +144,9 @@ const exportTable = () => {
 
 const loadCustomers = async (pagina = 1) => {
   try {
-    customers.value = await getCustomers(pagina, 20)
+    const { orderBy } = getProductFilters()
+
+    customers.value = await getCustomers(pagina, 20, filtro.busqueda, orderBy)
     page.value = customers.value.page
     totalPages.value = customers.value.totalPages
   } catch (err) {
@@ -206,11 +180,10 @@ onMounted(() => loadCustomers())
     <div class="flex flex-1 flex-col overflow-hidden">
       <main class="flex-1 overflow-y-auto px-8 py-8">
         <CatalogHeader
-          :is-customer="true"
+          :can-insert="false"
           :titulo="CustomerColumn.titulo"
           :subtitulo="CustomerColumn.subtitulo"
           :texto-boton="CustomerColumn.textoBoton"
-          @agregar="modalInsertEnable = true"
         />
 
         <CatalogFilter
@@ -229,33 +202,13 @@ onMounted(() => loadCustomers())
           :total-registros="customers?.totalCount ?? 0"
           :pagina="page"
           :total-paginas="totalPages"
-          @editar="openModalUpdate"
           @eliminar="openModalDelete"
           @exportar="exportTable"
           @cambiar-pagina="cambiarPagina"
         />
 
         <CustomersModals
-          v-if="modalInsertEnable"
-          :is-insert="true"
-          :modal-title="'Crear Cliente'"
-          :modal-subtitle="'Ingrese los datos del cliente'"
-          @close="modalInsertEnable = false"
-          @insert="insertRow"
-        />
-
-        <CustomersModals
-          v-if="modalUpdateEnable"
-          :modal-title="'Modificar Cliente'"
-          :modal-subtitle="'Cambie los datos del cliente'"
-          :customer="currentRow ?? undefined"
-          @close="modalUpdateEnable = false"
-          @update="updateRow"
-        />
-
-        <CustomersModals
           v-if="modalDeleteEnable"
-          :is-delete="true"
           :customer="currentRow ?? undefined"
           @close="modalDeleteEnable = false"
           @delete="deleteRow"

@@ -34,8 +34,10 @@ const props = withDefaults(
     pagina: number
     totalPaginas: number
     isCustomer?: boolean
+    cantAction?: boolean
   }>(),
   {
+    cantAction: true,
     isCustomer: false,
   },
 )
@@ -104,7 +106,7 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
             >
               {{ col.label }}
             </th>
-            <th class="px-6 py-3 text-right">Acciones</th>
+            <th v-if="cantAction" class="px-6 py-3 text-right">Acciones</th>
           </tr>
         </thead>
 
@@ -136,7 +138,10 @@ const variantesBoton: Record<NonNullable<CatalogColumn['buttonVariant']>, string
               <span v-else :class="index === 0 ? 'text-primary-800' : 'text-secondary-800'">{{ valorCelda(row, col) }}</span>
             </td>
 
-            <td class="px-6 py-4">
+            <td 
+              v-if="cantAction"
+              class="px-6 py-4"
+              >
               <div class="flex items-center justify-end gap-2">
                 <button
                   v-if="!isCustomer"

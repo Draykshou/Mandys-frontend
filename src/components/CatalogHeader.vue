@@ -7,10 +7,10 @@ const props = withDefaults(
     subtitulo: string
     textoBoton: string
 
-    isCustomer?: boolean
+    canInsert?: boolean
   }>(),
   {
-    isCustomer: false
+    canInsert: true
   },
 )
 
@@ -27,7 +27,7 @@ const emit = defineEmits<{
     </div>
 
     <button 
-      v-if="!isCustomer"
+      v-if="props.canInsert"
       type="button" 
       class="flex flex-row gap-1 items-center rounded-xl p-2 
       btn btn-primary bg-(--primary) text-neutral-100 text-xl text-bold shadow-sm

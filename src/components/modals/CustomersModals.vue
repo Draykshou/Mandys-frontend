@@ -1,174 +1,83 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 
-import DeleteModal from '@/components/DeleteModal.vue'
+import DeleteModal from '@/components/modals/DeleteModal.vue'
 
 import type { Customer } from '@/types/CustomersDtos'
 
 const props = defineProps<{
-  isInsert?: boolean
-  isDelete?: boolean
-  modalTitle?: string
-  modalSubtitle?: string
   customer?: Customer
-  password?: string
 }>()
 
 const emit = defineEmits<{
   close: []
-  insert: [string, string, string, string]
-  update: [string, string, string]
   delete: []
 }>()
 
-const firstName = ref(props.customer?.firstName ?? '')
-const lastName = ref(props.customer?.lastName ?? '')
 const email = ref(props.customer?.email ?? '')
-const password = ref(props.password ?? '')
 
-const showDeleteModal = ref(false)
+const firstDeleteModel = ref(true)
+const reasonModalEnable = ref(false)
 
-const puedeGuardar = computed(() => {
-  return (
-    firstName.value.trim() !== '' &&
-    lastName.value.trim() !== '' &&
-    email.value.trim() !== ''
-  )
-})
-
-const guardar = () => {
-  if (!puedeGuardar.value) return
-
-  if (props.isInsert) {
-    emit(
-      'insert',
-      firstName.value.trim(),
-      lastName.value.trim(),
-      email.value.trim(),
-      password.value.trim()
-    )
-  } else {
-    emit(
-      'update',
-      firstName.value.trim(),
-      lastName.value.trim(),
-      email.value.trim()
-    )
-  }
+const changeDeleteModal = () => {
+  firstDeleteModel.value = false
+  reasonModalEnable.value = true
 }
 
-const abrirDeleteModal = () => {
-  showDeleteModal.value = true
-}
-
-const cerrarDeleteModal = () => {
-  showDeleteModal.value = false
-}
-
-const confirmarDelete = () => {
-  emit('delete')
-}
 </script>
 
 <template>
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"
+    @click.self="emit('close')"
   >
-    <div class="w-full max-w-lg rounded-card bg-neutral-50 shadow-xl">
-      <div class="border-b border-neutral-200 px-6 py-5">
-        <h2 class="text-title font-semibold text-secondary-800">
-          {{ modalTitle }}
+    <div
+      v-if="firstDeleteModel"
+      class="w-full max-w-120 flex flex-col rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden m-8"
+    >
+      <div class="bg-red-500 text-neutral-50 text-2xl text-center font-bold p-2">
+        Eliminar Combo
+      </div>
+
+      <div class="bg-neutral-50 flex flex-col items-center text-center px-8 pt-4">
+        <OctagonAlert :size="80" class="text-red-500" />
+
+        <h2 class="text-red-500 font-bold text-xl pt-4">
+          ATENCIÓN
         </h2>
 
-        <p class="mt-1 text-body text-neutral-500">
-          {{ modalSubtitle }}
+        <p class="text-secondary-700">
+          Estás tratando de eliminar el cliente con correo electrónico:
+          <span class="font-bold text-secondary-800">{{ email }}</span>
+          <br />
+          ¿Estás seguro que deseas realizar esta acción?
         </p>
       </div>
 
-      <div v-if="!isDelete" class="space-y-5 px-6 py-6">
-        <div>
-          <label class="mb-2 block text-label font-medium text-secondary-800">
-            Correo electrónico
-          </label>
-
-          <input
-            v-model="email"
-            type="email"
-            class="w-full rounded-control border border-neutral-300 bg-neutral-50 px-3 py-2 outline-none focus:border-primary-500"
-            placeholder="correo@ejemplo.com"
-          />
-        </div>
-
-        <div>
-          <label class="mb-2 block text-label font-medium text-secondary-800">
-            Nombre
-          </label>
-
-          <input
-            v-model="firstName"
-            type="text"
-            class="w-full rounded-control border border-neutral-300 bg-neutral-50 px-3 py-2 outline-none focus:border-primary-500"
-            placeholder="Nombre del cliente"
-          />
-        </div>
-
-        <div>
-          <label class="mb-2 block text-label font-medium text-secondary-800">
-            Apellido
-          </label>
-
-          <input
-            v-model="lastName"
-            type="text"
-            class="w-full rounded-control border border-neutral-300 bg-neutral-50 px-3 py-2 outline-none focus:border-primary-500"
-            placeholder="Apellido del cliente"
-          />
-        </div>
-      </div>
-
-      <div
-        v-else
-        class="px-6 py-6 text-body text-secondary-800"
-      >
-        <p>
-          ¿Está seguro de que desea eliminar este cliente?
-        </p>
-      </div>
-
-      <div class="flex justify-end gap-3 border-t border-neutral-200 px-6 py-4">
+      <div class="bg-neutral-50 flex justify-between px-8 pt-4 pb-4">
         <button
           type="button"
-          class="rounded-control border border-neutral-300 px-4 py-2 text-label text-secondary-800 hover:bg-neutral-100"
+          class="bg-neutral-50 hover:bg-neutral-200 border hover:border-primary-600 active:bg-neutral-300 border-neutral-200 text-primary-600 py-3 px-7 rounded-xl shadow-xl"
           @click="emit('close')"
         >
           Cancelar
         </button>
 
         <button
-          v-if="!isDelete"
           type="button"
-          class="rounded-control bg-primary-600 px-4 py-2 text-label text-neutral-50 hover:bg-primary-700 disabled:opacity-40"
-          :disabled="!puedeGuardar"
-          @click="guardar"
+          class="bg-red-500 hover:bg-red-600 active:bg-red-700 border-neutral-200 text-neutral-50 py-3 px-7 rounded-xl shadow-xl"
+          @click="changeDeleteModal"
         >
-          {{ isInsert ? 'Crear' : 'Guardar' }}
-        </button>
-
-        <button
-          v-else
-          type="button"
-          class="rounded-control bg-red-600 px-4 py-2 text-label text-neutral-50 hover:bg-red-700"
-          @click="abrirDeleteModal"
-        >
-          Eliminar
+          Confirmar
         </button>
       </div>
     </div>
-  </div>
 
-  <DeleteModal
-    v-if="showDeleteModal"
-    @close="cerrarDeleteModal"
-    @delete="confirmarDelete"
-  />
+    <DeleteModal
+      v-if="reasonModalEnable"
+      @cancelar="emit('close')"
+      @confirmar="emit('delete')"
+    />
+  </div>
 </template>
