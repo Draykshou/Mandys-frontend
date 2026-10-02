@@ -36,8 +36,6 @@ const CustomerColumn: CatalogoDef = {
     { key: 'email', label: 'Correo electrónico', type: 'text' },
     { key: 'firstName', label: 'Nombre', type: 'text' },
     { key: 'lastName', label: 'Apellido', type: 'text' },
-    { key: 'hasLogin', label: 'Activo', type: 'boolean' },
-    { key: 'Puntos', label: 'Puntos de fidelidad', type: 'text' },
   ],
 }
 
@@ -90,8 +88,7 @@ const loadRowInformation = (row: CatalogRow) => {
     id: Number(row.id),
     firstName: String(row.firstName),
     lastName: String(row.lastName),
-    email: String(row.email),
-    hasLogin: row.hasLogin === true
+    email: String(row.email)
   }
 }
 
