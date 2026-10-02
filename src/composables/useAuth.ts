@@ -11,7 +11,7 @@ export interface AuthUser {
   email: string;
   firstName: string;
   lastName: string;
-  role: "Admin" | "User";
+  role: "Administrador" | "Gerente de Operaciones" | "Encargado de Almacen Central" | "Encargado de Almacen" | "Cajero" | "Jefe Cocina" | "Gerente Sucursal" | "Cliente";
 }
 
 type AuthState =

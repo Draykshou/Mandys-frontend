@@ -9,7 +9,7 @@ withDefaults(
   }>(),
   {
     categorias: () => ['Todas las categorías'],
-    placeholder: 'Buscar por nombre o ID...',
+    placeholder: 'Buscar por nombre o descripción...',
   },
 )
 
@@ -40,7 +40,7 @@ const emit = defineEmits<{
       <div class="flex items-center gap-3">
         <div class="relative">
           <select :value="categoria"
-            class="appearance-none rounded-[var(--radius-control)] border border-neutral-200 bg-neutral-50 py-2.5 pl-4 pr-10 text-body text-secondary-800 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+            class="appearance-none rounded-control border border-neutral-200 bg-neutral-50 py-2.5 pl-4 pr-10 text-body text-secondary-800 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
             @change="emit('update:categoria', ($event.target as HTMLSelectElement).value)">
             <option v-for="opcion in categorias" :key="opcion" :value="opcion">{{ opcion }}</option>
           </select>

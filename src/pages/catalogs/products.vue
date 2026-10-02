@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted, computed } from 'vue'
 
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -11,12 +11,17 @@ import { useToast } from '@/composables/useToast'
 import { useExportCatalog } from '@/composables/useExportCatalog'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
 import ProductsModals from '@/components/modals/ProductsModals.vue'
+import useAuth from '@/composables/useAuth'
 
 import type { Product, CreateProduct, UpdateProduct, Products } from '@/types/ProductsDtos'
 import { deleteProduct, getProducts, postProduct, putProduct } from '@/service/ProductsService'
 import axios from 'axios'
 
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
+
+const { state: auth} = useAuth()
+
+const rolUsuario = computed(() => auth.value.user?.role ?? '')
 
 interface CatalogoDef {
   titulo: string
@@ -32,7 +37,7 @@ const productsColumn: CatalogoDef = {
   titulo: 'Productos',
   subtitulo: 'Control y administración del inventario de productos de la sucursal.',
   textoBoton: 'Agregar Producto',
-  categorias: ['Todos', 'Bebidas', 'Comida', 'Postres'],
+  categorias: ['Todos', 'Alfabetico A-Z', 'Alfabetico Z-A', 'Mayor precio', 'Menor precio', 'Es Insumo', 'No es Insumo'],
   columns: [
     { key: 'description', label: 'Descripción', type: 'text' },
     { key: 'isSupply', label: 'Insumo', type: 'boolean' },
@@ -57,8 +62,46 @@ function limpiarFiltro() {
   filtro.categoria = productsColumn.categorias[0]
 }
 
-function buscar() {
- 
+const search = async () => {
+  await loadProducts(1)
+}
+
+const getProductFilters = () => {
+  let orderBy = ''
+  let isSupply: boolean | null = null
+
+  switch (filtro.categoria) {
+    case 'Alfabetico A-Z':
+      orderBy = 'description'
+      break
+
+    case 'Alfabetico Z-A':
+      orderBy = '-description'
+      break
+
+    case 'Mayor precio':
+      orderBy = '-salePrice'
+      break
+
+    case 'Menor precio':
+      orderBy = 'salePrice'
+      break
+
+    case 'Es Insumo':
+      isSupply = true
+      break
+    case 'No es Insumo':
+      isSupply = false
+      break
+    default:
+      orderBy = 'description'
+      break
+  }
+
+  return {
+    orderBy,
+    isSupply
+  }
 }
 
 const modalInsertEnable = ref(false)
@@ -185,7 +228,9 @@ const exportTable = () => {
 
 const loadProducts = async (p = 1) => {
   try{
-    products.value = await getProducts(p, 20, "", "description", null)
+    const { orderBy, isSupply } = getProductFilters()
+    
+    products.value = await getProducts(p, 20, filtro.busqueda, orderBy, isSupply)
     page.value = products.value.page
     totalPages.value = products.value.totalPages
   }
@@ -217,6 +262,7 @@ onMounted(loadProducts)
 
       <main class="flex-1 overflow-y-auto px-8 py-8">
         <CatalogHeader
+          :can-insert="rolUsuario === 'Gerente de Operaciones' ? false : true"
           :titulo="productsColumn.titulo"
           :subtitulo="productsColumn.subtitulo"
           :texto-boton="productsColumn.textoBoton"
@@ -227,11 +273,12 @@ onMounted(loadProducts)
           v-model:busqueda="filtro.busqueda"
           v-model:categoria="filtro.categoria"
           :categorias="productsColumn.categorias"
-          @buscar="buscar"
+          @buscar="search"
           @limpiar="limpiarFiltro"
         />
 
         <CatalogTable
+          :cant-action="rolUsuario === 'Gerente de Operaciones' ? false : true"
           :titulo="productsColumn.titulo"
           :columns="productsColumn.columns"
           :rows="products?.items ?? []"

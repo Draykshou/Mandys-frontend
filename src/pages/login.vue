@@ -55,20 +55,17 @@ const handleLogin = async () => {
   <div class="min-h-screen bg-[#f8f6f0] flex flex-col items-center justify-center p-4 font-sans text-[#1a1a1a]">
     
     <!-- Top Left Logo -->
-    <div class="absolute top-6 left-6 flex items-center gap-3">
-      <div class="w-16 h-16 flex items-center justify-center overflow-hidden login-anim">
-      </div>
-      <span class="text-3xl font-bold tracking-tight login-anim">Mandy's POS</span>
-    </div>
+    
 
     <!-- Main Card -->
     <div class="bg-white rounded-[20px] shadow-xl w-full max-w-xl p-10 lg:p-12 z-10 mt-10">
       
       <!-- Header -->
       <div class="mb-8 login-anim">
-        <h1 class="text-4xl font-bold mb-4 tracking-tight">Inicio de sesión</h1>
-        <p class="text-stone-500 text-base leading-relaxed">
-          Ingresa tus credenciales para acceder a la gestión de catálogo, inventario y ventas de sucursal.
+        <img src="@/assets/mandys.webp" alt="Mandy's POS Logo" class="w-48 mx-auto mb-4" />
+        <h1 class="text-4xl font-bold mb-4 tracking-tight text-center">Bienvenido</h1>
+        <p class="text-stone-500 text-base leading-relaxed text-center">
+          Por favor, ingresa tus credenciales para acceder al sistema de gestión de Mandy's POS.
         </p>
       </div>
 

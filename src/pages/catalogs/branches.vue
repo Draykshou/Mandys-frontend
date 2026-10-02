@@ -31,7 +31,7 @@ const BranchColumn: CatalogoDef = {
   titulo: 'Sucursales',
   subtitulo: 'Gestión de las sucursales del restaurante',
   textoBoton: 'Agregar Sucursal',
-  categorias: ['Todos'],
+  categorias: ['Alfabetico A-Z', 'Alfabetico Z-A'],
   columns: [
     { key: 'name', label: 'Nombre', type: 'text' },
     { key: 'address', label: 'Dirección', type: 'text' },
@@ -54,7 +54,29 @@ function cleanFilter() {
   filtro.categoria = BranchColumn.categorias[0]
 }
 
-function search() {
+const search = async () => {
+  await loadBranches(1)
+}
+
+const getProductFilters = () => {
+  let orderBy = ''
+  switch (filtro.categoria) {
+    case 'Alfabetico A-Z':
+      orderBy = 'name'
+      break
+
+    case 'Alfabetico Z-A':
+      orderBy = '-name'
+      break
+
+    default:
+      orderBy = 'name'
+      break
+  }
+
+  return {
+    orderBy
+  }
 }
 
 const modalInsertEnable = ref(false)
@@ -184,7 +206,9 @@ const exportTable = () => {
 
 const loadBranches = async (pagina = 1) => {
   try {
-    branches.value = await getBranches(pagina, 20)
+    const { orderBy } = getProductFilters()
+
+    branches.value = await getBranches(pagina, 20, filtro.busqueda, orderBy)
     page.value = branches.value.page
     totalPages.value = branches.value.totalPages
   } catch (err) {

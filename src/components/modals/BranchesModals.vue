@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { OctagonAlert } from 'lucide-vue-next'
 
 
-import DeleteModal from '@/components/DeleteModal.vue'
+import DeleteModal from '@/components/modals/DeleteModal.vue'
 import type { Branch } from '@/types/BranchesDtos'
 
 const props = defineProps<{

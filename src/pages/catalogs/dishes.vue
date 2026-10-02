@@ -34,7 +34,7 @@ const DishesColumn: CatalogoDef = {
   titulo: 'Platillos',
   subtitulo: 'Gestión de los platillos del restaurante',
   textoBoton: 'Agregar Platillo',
-  categorias: ['Todos', 'Bebidas', 'Comida', 'Postres'],
+  categorias: ['Todos', 'Alfabetico A-Z', 'Alfabetico Z-A', 'Mayor precio', 'Menor precio'],
   columns: [
     { key: 'name', label: 'Nombre', type: 'text' },
     { key: 'price', label: 'Precio', type: 'currency' },
@@ -57,10 +57,37 @@ function cleanFilter() {
   filtro.categoria = DishesColumn.categorias[0]
 }
 
-function search() {
- 
+const search = async () => {
+  await loadDishes(1)
 }
 
+const getProductFilters = () => {
+  let orderBy = ''
+  switch (filtro.categoria) {
+    case 'Alfabetico A-Z':
+      orderBy = 'name'
+      break
+
+    case 'Alfabetico Z-A':
+      orderBy = '-name'
+      break
+
+    case 'Mayor precio':
+      orderBy = '-price'
+      break
+
+    case 'Menor precio':
+      orderBy = 'price'
+      break
+    default:
+      orderBy = 'name'
+      break
+  }
+
+  return {
+    orderBy
+  }
+}
 // CUD
 const modalInsertEnable = ref(false)
 const modalUpdateEnable = ref(false)
@@ -178,7 +205,9 @@ const exportTable = () => {
 
 const loadDishes = async (p = 1) => {
   try{
-    dishes.value = await getDishes(p, 5, '', "name");
+    const { orderBy } = getProductFilters()
+
+    dishes.value = await getDishes(p, 5, filtro.busqueda, orderBy)
     page.value = dishes.value.page
     totalPages.value = dishes.value.totalPages
     console.log(dishes.value)
