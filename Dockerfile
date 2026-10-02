@@ -1,5 +1,5 @@
 # ── Stage 1: Build ────────────────────────────────────────────────────────────
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -9,10 +9,12 @@ RUN npm ci
 
 # Copy source and build
 COPY . .
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # ── Stage 2: Serve ────────────────────────────────────────────────────────────
-FROM nginx:1.27-alpine AS runner
+FROM nginx:1.31-alpine AS runner
 
 # Remove the default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
