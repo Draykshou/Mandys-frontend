@@ -1,8 +1,19 @@
 import { api } from "@/lib/api-client"
 import type { CreateProduct, Product, Products, UpdateProduct } from "@/types/ProductsDtos"
 
-export async function getProducts(): Promise<Products>{
-    const response = await api.get<Products>("/products")
+export async function getProducts(
+    page = 1,
+    pageSize = 20,
+    search = ''
+) {
+    const response = await api.get<Products>('/products', {
+        params: {
+            page,
+            pageSize,
+            search: search || undefined
+        }
+    })
+
     return response.data
 }
 
@@ -11,11 +22,11 @@ export async function postProduct(payload: CreateProduct): Promise<Product> {
     return response.data
 }
 
-export async function putProduct(id: string, payload: UpdateProduct): Promise<Product> {
+export async function putProduct(id: number, payload: UpdateProduct): Promise<Product> {
     const response = await api.put<Product>(`/products/${id}`, payload)
     return response.data
 }
 
-export async function deleteProduct(id: string): Promise<void> {
+export async function deleteProduct(id: number): Promise<void> {
     await api.delete(`/products/${id}`)
 }

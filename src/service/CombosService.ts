@@ -6,17 +6,17 @@ export async function getCombos(): Promise<Combos>{
     return response.data as Combos
 }
 
-export async function createCombo(payload: CreateCombo): Promise<Combo> {
+export async function postCombo(payload: CreateCombo): Promise<Combo> {
     const response = await api.post<Combo>("/combos", payload)
     return response.data
 }
 
 /** El update reemplaza el combo completo, por eso manda el mismo cuerpo que el alta. */
-export async function updateCombo(id: string, payload: UpdateCombo): Promise<Combo> {
+export async function putCombo(id: number, payload: UpdateCombo): Promise<Combo> {
     const response = await api.put<Combo>(`/combos/${id}`, payload)
     return response.data
 }
 
-export async function deleteCombo(id: string): Promise<void> {
+export async function deleteCombo(id: number): Promise<void> {
     await api.delete(`/combos/${id}`)
 }

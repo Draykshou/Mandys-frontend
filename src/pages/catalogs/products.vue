@@ -9,10 +9,11 @@ import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
 import { useToast } from '@/composables/useToast'
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
-import ActionModal from '@/components/ActionModal.vue'
+import ProductsModals from '@/components/modals/ProductsModals.vue'
 
 import type { Product, CreateProduct, UpdateProduct, Products } from '@/types/ProductsDtos'
-import { getProducts, postProduct, putProduct } from '@/service/ProductsService'
+import { deleteProduct, getProducts, postProduct, putProduct } from '@/service/ProductsService'
+import axios from 'axios'
 
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
@@ -40,8 +41,8 @@ const productsColumn: CatalogoDef = {
   ],
 }
 
-const pagina = ref(1)
-const totalPaginas = ref(1)
+const page = ref(1)
+const totalPages = ref(1)
 
 // Filtro
 const filtro = reactive({
@@ -64,6 +65,8 @@ const modalInsertEnable = ref(false)
 const modalUpdateEnable = ref(false)
 const currentRow = ref<Product | null>(null)
 
+const modalDeleteEnable = ref(false)
+
 // CUD
 const insertRow = async (description: string, isSupply: boolean, price: number, measureUnit: string) => {
   const product : CreateProduct = {
@@ -76,22 +79,36 @@ const insertRow = async (description: string, isSupply: boolean, price: number, 
 
   try {
     const response = await postProduct(product)
+    modalInsertEnable.value = false
+    mostrarToast('Producto agregado correctamente.','exito')
     console.log(response)
+    await loadProducts()
   } catch (err) {
     console.error("No se pudo crear el producto:", err)
+    mostrarToast(obtenerMensajeError(err,'No se pudo crear el platillo.'),'error')
   }
 }
 
-const loadUpdateRowInformation = (row: CatalogRow) => {
+const loadRowInformation = (row: CatalogRow) => {
   currentRow.value = {
-    id: String(row.id),
+    id: Number(row.id),
     description: String(row.description),
     isSupply: Boolean(row.isSupply),
     price: Number(row.price),
     measureUnit: String(row.measureUnit),
   }
+}
+
+const openModalUpdate = (row: CatalogRow) => {
+  loadRowInformation(row)
   modalUpdateEnable.value = true
 }
+
+const openModalDelete = (row: CatalogRow) => {
+  loadRowInformation(row)
+  modalDeleteEnable.value = true
+}
+
 
 const updateRow = async (description: string, isSupply: boolean, price: number, measureUnit: string) => {
   const product : UpdateProduct = {
@@ -102,7 +119,19 @@ const updateRow = async (description: string, isSupply: boolean, price: number, 
   }
   console.log("update call")
   try {
-    const response = await putProduct(currentRow.value?.id as string, product)
+    const response = await putProduct(currentRow.value?.id as number, product)
+    modalUpdateEnable.value = false
+    mostrarToast('Producto agregado correctamente.','exito')
+    console.log(response)
+    
+  } catch (err) {
+    console.error("No se pudo actualizar el producto:", err)
+  }
+}
+
+const deleteRow = async () => {
+  try {
+    const response = await deleteProduct(currentRow.value?.id as number)
     console.log(response)
     window.location.reload()
   } catch (err) {
@@ -110,27 +139,37 @@ const updateRow = async (description: string, isSupply: boolean, price: number, 
   }
 }
 
-const deleteRow = (row: CatalogRow) => {
-  
+const changePage = async (page: number) => {
+  await loadProducts(page)
 }
 
 const exportTable = () => {
   
 }
 
-const cargarProductos = async () => {
+const loadProducts = async (p = 1) => {
   try{
-    products.value = await getProducts();
-    pagina.value = products.value.page
-    totalPaginas.value = products.value.totalPage
-    console.log(products.value)
+    products.value = await getProducts(p, 25)
+
+    page.value = products.value.page
+    totalPages.value = products.value.totalPages
   }
   catch(err){
     console.error('No se pudieron cargar los productos:', err)
   }
 }
 
-onMounted(cargarProductos)
+const obtenerMensajeError=(err:unknown,mensajeDefault:string)=>{
+    if(axios.isAxiosError(err)){
+        const mensaje=err.response?.data?.message
+        if(typeof mensaje==='string'&&mensaje.trim()!==''){
+            return mensaje
+        }
+    }
+    return mensajeDefault
+}
+
+onMounted(loadProducts)
 
 </script>
 
@@ -162,16 +201,16 @@ onMounted(cargarProductos)
           :columns="productsColumn.columns"
           :rows="products?.items ?? []"
           :total-registros="products?.totalCount ?? 0"
-          :pagina="pagina"
-          :total-paginas="totalPaginas"
-          @editar="loadUpdateRowInformation"
-          @eliminar="deleteRow"
+          :pagina="Number(products?.page)"
+          :total-paginas="Number(products?.totalPages)"
+          @editar="openModalUpdate"
+          @eliminar="openModalDelete"
           @exportar="exportTable"
-          @cambiar-pagina="(p) => (pagina = p)"
+          @cambiar-pagina="changePage"
         />
 
-        <ActionModal
-          v-if="modalInsertEnable === true"
+        <ProductsModals
+          v-if="modalInsertEnable"
           :is-insert="true"
           :modal-title="'Crear producto'"
           :modal-subtitle="'Ingrese los datos del producto'"
@@ -179,8 +218,8 @@ onMounted(cargarProductos)
           @insert="insertRow"
         />
 
-        <ActionModal
-          v-if="modalUpdateEnable === true"
+        <ProductsModals
+          v-if="modalUpdateEnable"
           :modal-title="'Modificar producto'"
           :modal-subtitle="'cambie los datos del producto'"
           @close="modalUpdateEnable = false"
@@ -189,6 +228,14 @@ onMounted(cargarProductos)
           :is-supply="currentRow?.isSupply"
           :price="currentRow?.price"
           :measure-unit="currentRow?.measureUnit"
+        />
+
+        <ProductsModals
+          v-if="modalDeleteEnable === true"
+          :is-delete="true"
+          @close="modalDeleteEnable = false"
+          @delete="deleteRow"
+          :description="currentRow?.description"
         />
 
         <AppToast

@@ -35,7 +35,7 @@ const props = withDefaults(
     totalPaginas: number
   }>(),
   {
-    totalPaginas: 1,
+    
   },
 )
 

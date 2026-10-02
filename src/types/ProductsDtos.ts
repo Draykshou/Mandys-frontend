@@ -1,5 +1,5 @@
 export interface Product {
-    id: string
+    id: number
     description: string
     isSupply: boolean
     price: number
@@ -24,6 +24,6 @@ export interface Products{
     totalCount: number
     page: number
     pageSize: number
-    totalPage: number
+    totalPages: number
     items: Product[]
 }
