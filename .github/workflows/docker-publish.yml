@@ -52,6 +52,16 @@ jobs:
             # always tag the short SHA for traceability
             type=sha,prefix=sha-
 
+      - name: Verify VITE_API_URL secret exists
+        run: |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "::error::El secreto VITE_API_URL esta vacio o no existe en GitHub Secrets!"
+            exit 1
+          fi
+          echo "VITE_API_URL detectado correctamente."
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
