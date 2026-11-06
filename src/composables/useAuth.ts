@@ -89,10 +89,13 @@ export default function useAuth() {
     }
   };
 
+  const clearSession = () => { authState.value = { user: null, status: "unauthenticated" }; };
+
   return {
     loadUser,
     state: readonly(authState),
     login,
     logout,
+    clearSession,
   };
 }

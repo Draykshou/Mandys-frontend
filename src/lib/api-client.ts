@@ -10,6 +10,8 @@ type RetryableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
 // Single shared refresh so concurrent 401s only hit POST /refresh once.
 let refreshPromise: Promise<void> | null = null;
+let onSessionExpired: (() => void) | null = null;
+export const setSessionExpiredHandler = (fn: () => void) => { onSessionExpired = fn; };
 
 function doRefresh(): Promise<void> {
   if (!refreshPromise) {
@@ -29,6 +31,8 @@ function isAuthEndpoint(url: string | undefined): boolean {
   // may be expired while the refresh_token is still valid.
   return url.includes("/login") || url.includes("/refresh");
 }
+
+
 
 api.interceptors.response.use(
   (response) => response,
@@ -51,6 +55,7 @@ api.interceptors.response.use(
     } catch (refreshError) {
       // Refresh token expired/revoked: caller (e.g. loadUser) sees the
       // refresh failure and transitions to unauthenticated.
+      onSessionExpired?.();
       return Promise.reject(refreshError);
     }
 

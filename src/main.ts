@@ -2,16 +2,54 @@ import { createApp } from "vue";
 import "@/style.css";
 import App from "@/App.vue";
 import { createRouter, createWebHistory } from "vue-router";
-import { routes, handleHotUpdate } from "vue-router/auto-routes";
+import { routes } from "vue-router/auto-routes";
+import useAuth from "./composables/useAuth";
+import { setSessionExpiredHandler } from "./lib/api-client";
 
 export const router = createRouter({
   history: createWebHistory(),
   routes,
 });
 
-if (import.meta.hot) {
-  handleHotUpdate(router);
-}
+router.beforeEach(async (to) => {
+  const { state, loadUser } = useAuth();
+
+  // Primera carga: esperar a saber si hay sesión
+  if (state.value.status === "loading") await loadUser();
+
+  const { status, user } = state.value;
+  const isAuth = status === "authenticated";
+
+  if (to.meta.public) {
+    // Ya esta logueado
+    return isAuth && to.path === "/login" ? { path: "/" } : true;
+  }
+
+  if (!isAuth) {
+    return { path: "/login", query: { redirect: to.fullPath } };
+  }
+
+  if (to.meta.roles && !to.meta.roles.includes(user.role)) {
+    return { path: "/forbidden" }; // crea una página simple de "sin permiso"
+  }
+
+  return true;
+});
+
+setSessionExpiredHandler(() => {
+  const { state, clearSession } = useAuth()
+  const estabaAutenticado = state.value.status === 'authenticated'
+
+  clearSession()
+
+  if (estabaAutenticado) {
+    router.push({
+      path: '/login',
+      query: { redirect: router.currentRoute.value.fullPath },
+    })
+  }
+})
+
 
 const app = createApp(App);
 app.use(router);

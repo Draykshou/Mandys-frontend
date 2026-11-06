@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import {
   Mail,
   Key,
@@ -11,6 +11,9 @@ import useAuth from '@/composables/useAuth'
 import { useAnime } from '@/composables/useAnime'
 import { stagger } from 'animejs'
 
+definePage({ meta: { public: true } });
+
+const route = useRoute()
 const router = useRouter()
 const { login: authenticate } = useAuth()
 
@@ -40,7 +43,12 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-    await router.push('/catalogs/home')
+    const redirect = route.query.redirect
+    const destino =
+      typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
+        ? redirect
+        : '/catalogs/home'
+    await router.push(destino)
   } catch (err) {
     console.error('Error al iniciar sesión:', err)
 

@@ -17,6 +17,10 @@ import type { Product, CreateProduct, UpdateProduct, Products } from '@/types/Pr
 import { deleteProduct, getProducts, postProduct, putProduct } from '@/service/ProductsService'
 import axios from 'axios'
 
+definePage({
+  meta: { roles: ["Administrador", "Gerente de Operaciones", "Encargado de Almacen Central", "Encargado de Almacen"] },
+});
+
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
 const { state: auth} = useAuth()
@@ -139,7 +143,7 @@ const loadRowInformation = (row: CatalogRow) => {
     isSupply: Boolean(row.isSupply),
     costPrice: Number(row.costprice),
     salePrice: Number(row.salePrice),
-    measureUnit: String(row.measureUnit),
+    measureUnit: row.measureUnit as "Gramos" | "Mililitros" | "Unidades",
   }
 }
 

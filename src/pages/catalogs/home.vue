@@ -5,6 +5,10 @@ import appSidebar from '@/components/AppSidebar.vue'
 import easterEgg from '@/assets/paco-porno.webp'
 import easterEggSound from '@/assets/sans-voice.mp3'
 
+definePage({
+  meta: { roles: ["Administrador", "Gerente de Operaciones", "Encargado de Almacen Central", "Encargado de Almacen", "Cajero", "Gerente Sucursal"] },
+});
+
 const konamiCode = [
   'ArrowUp',
   'ArrowUp',

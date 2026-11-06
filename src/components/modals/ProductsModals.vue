@@ -126,11 +126,9 @@ const changeDeleteModal = () => {
                 Selecciona una unidad
               </option>
 
-              <option value="kg">Kilogramos</option>
-              <option value="g">Gramos</option>
-              <option value="l">Litros</option>
-              <option value="ml">Mililitros</option>
-              <option value="pz">Piezas</option>
+              <option value="Gramos">Gramos</option>
+              <option value="Mililitros">Mililitros</option>
+              <option value="Unidades">Unidades</option>
             </select>
           </div>
                 
