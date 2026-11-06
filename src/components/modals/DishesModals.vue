@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
 import { ref, computed, watch } from 'vue'
-import { DollarSign, OctagonAlert, Trash2, FileText } from 'lucide-vue-next'
+import { DollarSign, OctagonAlert, Trash2, FileText, X } from 'lucide-vue-next'
 import type { Dish , Recipe, CreateDish, UpdateDish } from '@/types/DishesDtos'
 import type { Product } from '@/types/ProductsDtos'
 import { getProducts } from '@/service/ProductsService'
@@ -121,6 +121,15 @@ const deleteProducts=(productId:number)=>{
 const changeDeleteModal = () => {
   reasonModalEnable.value = true
   firstDeleteModel.value = false
+}
+
+const closeRecipe = () => {
+  if (props.isAction) {
+    emit('close')
+    return
+  }
+
+  recipeEnable.value = false
 }
 
 const save=()=>{
@@ -319,9 +328,20 @@ const exportarPdf = async () => {
 
     <!-- Modal de tabla -->
     <div v-if="recipeEnable || isAction" class="flex flex-col w-full h-full max-h-150 max-w-2xl rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden ml-8">
-      <div class="border-b border-neutral-200 p-4 shrink-0">
+      <div class="flex items-start justify-between border-b border-neutral-200 p-4 shrink-0">
+        <div>
           <h2 class="text-secondary-800 text-2xl font-bold">Receta</h2>
           <p class="text-neutral-700">Productos utilizados en el platillo</p>
+        </div>
+
+        <button
+          type="button"
+          aria-label="Cerrar modal"
+          class="ml-4 shrink-0 rounded-lg p-1 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-secondary-800"
+          @click="closeRecipe"
+        >
+          <X :size="22" />
+        </button>
       </div>
       <div class="p-6 flex-1 min-h-0">
           <div class="border border-neutral-200 rounded-xl overflow-hidden h-full">

@@ -3,9 +3,9 @@
 </script>
 
 <template>
-  <header class="fixed top-0 left-0 w-full max-h-18 z-50 bg-primary-600 flex items-center justify-between px-6 py-4 text-neutral-50">
+  <header class="fixed top-0 left-0 w-full h-16 z-40 bg-primary-600 flex items-center justify-between px-6 text-neutral-50 transition-all duration-300">
     <div class="flex items-center gap-3">
-      <img src="@/assets/mandys_logo_h.svg" alt="Mandy's POS Logo" class="h-18 w-auto mx-auto object-contain" />
+      <!-- El logo de Mandy's se encuentra integrado en la parte superior del sidebar -->
     </div>
   </header>
 </template>
