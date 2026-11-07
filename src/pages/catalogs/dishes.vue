@@ -17,6 +17,9 @@ import type { CreateDish, Dish, Dishes, UpdateDish } from '@/types/DishesDtos'
 
 import { postDish, putDish, deleteDish, getDishes } from '@/service/DishesService'
 
+definePage({
+  meta: { roles: ["Administrador", "Gerente de Operaciones"]},
+});
 
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 

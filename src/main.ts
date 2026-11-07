@@ -22,7 +22,7 @@ router.beforeEach(async (to) => {
 
   if (to.meta.public) {
     // Ya esta logueado
-    return isAuth && to.path === "/login" ? { path: "/" } : true;
+    return isAuth && to.path === "/login" ? { path: "/catalogs/home" } : true;
   }
 
   if (!isAuth) {
@@ -30,7 +30,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.roles && !to.meta.roles.includes(user.role)) {
-    return { path: "/forbidden" }; // crea una página simple de "sin permiso"
+    return { path: "/catalogs/home" }; // crea una página simple de "sin permiso"
   }
 
   return true;

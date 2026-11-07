@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { StorageItem } from '@/types/Storage'
+import type { Storage } from '@/types/Storage'
 import { Sheet, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Pencil } from 'lucide-vue-next'
 import { animate } from 'animejs'
 
@@ -25,24 +25,24 @@ const onEnter = (el: Element, done: () => void) => {
 }
 
 const props = defineProps<{
-  rows: StorageItem[]
+  rows: Storage[]
   totalRegistros: number
   pagina: number
   totalPaginas: number
 }>()
 
 const emit = defineEmits<{
-  entrada: [row: StorageItem]
-  salida: [row: StorageItem]
-  editar: [row: StorageItem]
+  entrada: [row: Storage]
+  salida: [row: Storage]
+  editar: [row: Storage]
   'cambiar-pagina': [pagina: number]
   exportar: []
 }>()
 
 // Regla de alerta: stock igual o menor al umbral.
 // Está aislada aquí para cambiarla en un solo lugar si hace falta.
-function enAlerta(row: StorageItem) {
-  return row.stock <= row.umbralMaximo
+function enAlerta(row: Storage) {
+  return row.currentStock <= row.minimumStock
 }
 
 const formatoFecha = new Intl.DateTimeFormat('es-MX', {
@@ -83,8 +83,7 @@ const rangoMostrado = computed(() => {
           <tr class="border-b border-neutral-100 bg-neutral-100/60 text-caption uppercase tracking-wide text-neutral-500">
             <th class="px-6 py-3 text-left">Nombre</th>
             <th class="px-6 py-3 text-center">Stock</th>
-            <th class="px-6 py-3 text-center">Último stock</th>
-            <th class="px-6 py-3 text-center">Umbral máximo</th>
+            <th class="px-6 py-3 text-center">Stock Minimo</th>
             <th class="px-6 py-3 text-right">Acciones</th>
           </tr>
         </thead>
@@ -101,20 +100,18 @@ const rangoMostrado = computed(() => {
                 : 'border-neutral-50 hover:bg-neutral-100/60'
             "
           >
-            <td class="px-6 py-4 text-left text-primary-800">{{ row.nombre }}</td>
+            <td class="px-6 py-4 text-left text-primary-800">{{ row.product.description }}</td>
 
             <td
               class="px-6 py-4 text-center font-semibold"
               :class="enAlerta(row) ? 'text-red-700' : 'text-secondary-800'"
             >
-              {{ row.stock }}
+              {{ row.currentStock }}
             </td>
-
-            <td class="px-6 py-4 text-center text-secondary-800">{{ formatFecha(row.ultimoStock) }}</td>
 
             <td class="px-6 py-4 text-center text-secondary-800">
                 <div class="flex items-center justify-center gap-4">
-                    {{ row.umbralMaximo }}
+                    {{ row.minimumStock }}
                     <button
                     type="button"
                     class="action-button hover:bg-blue-100 hover:text-blue-700 active:bg-blue-200"

@@ -1,31 +1,80 @@
 <script setup lang="ts"> 
-import { ref, onMounted} from 'vue'
+import { ref, onMounted, computed, watch} from 'vue'
+
+// UI Externa
 import AppHeader from '@/components/AppHeader.vue'
 import appSidebar from '@/components/AppSidebar.vue'
-import CatalogHeader from '@/components/CatalogHeader.vue'
+
+// Services y tipos
+import useAuth from '@/composables/useAuth'
+import { getStorage, putStorage, inStorage, outStorage } from '@/service/StorageService'
+import { getBranches } from '@/service/BranchesService'
+import type { Storages, StorageIn } from '@/types/Storage'
+import type { Branch } from '@/types/BranchesDtos'
+
+// UI interna
+import StorageHeader from '@/components/storage/StorageHeader.vue'
 import storageTable from '@/components/storage/storageTable.vue'
-import type { Storage } from '@/types/Storage'
-import { getStorageMock } from '@/mocks/storageMock'
+import StorageModals from '@/components/storage/StorageModals.vue'
 
+const { state: auth} = useAuth()
+const rolUsuario = computed(() => auth.value.user?.role ?? '')
 
-const storage = ref<Storage | null>(null)
+const storages = ref<Storages | null>(null)
 const page = ref(1)
 const totalPages = ref(1)
 
+const branches = ref<Branch[]>([]);
+const selectedBranchId = ref<number>();
+const selectedBranchName = ref<string>('');
+
+const loadBranches = async () => {
+  try {
+    const { items } = await getBranches(1, 40, '', 'id');
+    branches.value = items;
+
+    // Seleccionar la primera sucursal por defecto
+    if (branches.value.length > 0) {
+      selectedBranchId.value = branches.value[0].id;
+      selectedBranchName.value = branches.value[0].name;
+    }
+  } catch (error) {
+    console.error('Error al cargar sucursales:', error);
+  }
+};
+
 const loadStorage = async (p = 1) => {
   try {
-    storage.value = await getStorageMock(p, 5)
-    page.value = storage.value.page
-    totalPages.value = storage.value.totalPages
+    console.log('Cargando inventario para la sucursal:', selectedBranchId.value)
+    storages.value = await getStorage(selectedBranchId.value as number, p, 20, '', '', null)
+    page.value = storages.value.page
+    totalPages.value = storages.value.totalPages
+    console.log('Inventario cargado:', storages.value)
   } catch (err) {
     console.error('No se pudo cargar el inventario:', err)
   }
 }
 
-onMounted(() => loadStorage())
+watch(selectedBranchId, (newId) => {
+  if (newId !== undefined) {
+    loadStorage(1)
+  }
+})
 
+const storageInModal = ref(false)
+const storageOutModal = ref(false)
 
+const registrarEntrada = async (entrada: StorageIn) => {
+  console.log(entrada)
+  await inStorage(Number(selectedBranchId.value), entrada)
+  storageInModal.value = false
+  await loadStorage()
+}
 
+onMounted( async () => {
+  await loadBranches()
+  loadStorage();
+})
 
 </script>
 
@@ -38,15 +87,24 @@ onMounted(() => loadStorage())
     
     <div class="flex flex-1 flex-col overflow-hidden">
       <div class="flex-1 overflow-y-auto px-8 py-8">
-        <CatalogHeader
-          :titulo="'Gestion de almacen'"
-          :subtitulo="'Gestiona las entradas y salidas'"
-          :texto-boton="'Generar entrada'"
+        <StorageHeader
+          :rol-usuario="rolUsuario"
+          :branches="branches"
+          v-model:selectedBranchId="selectedBranchId"
+          @storage-in="storageInModal = true"
         /> 
 
+        <StorageModals
+          v-if="storageInModal"
+          :branch-id="Number(selectedBranchId)"
+          @close="storageInModal = false"
+          @storage-in="registrarEntrada"
+        />
+
+
         <storageTable
-          :rows="storage?.items ?? []"
-          :total-registros="storage?.totalCount ?? 0"
+          :rows="storages?.items ?? []"
+          :total-registros="storages?.totalCount ?? 0"
           :pagina="page"
           :total-paginas="totalPages"
           @cambiar-pagina="loadStorage"

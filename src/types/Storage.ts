@@ -1,15 +1,39 @@
-export interface StorageItem {
+import type { Product } from '@/types/ProductsDtos'
+
+export interface Storage {
   id: number
-  nombre: string
-  stock: number
-  ultimoStock: string | null 
-  umbralMaximo: number
+  branchId: number
+  product: Product
+  minimumStock: number
+  currentStock: number
+}
+
+export interface StorageUpdate{
+  minimunStock: number
+}
+
+export interface StorageIn {
+  folio: string
+  products: {
+    productId: number
+    quantity: number
+    costPrice: number
+  }[]
+}
+
+export interface StorageOut {
+  products: {
+    productId: number
+    quantity: number
+  }[]
+  folio: string | null
 }
  
-export interface Storage {
+export interface Storages {
   totalCount: number
   page: number
   pageSize: number
   totalPages: number
-  items: StorageItem[]
+  items: Storage[]
 }
+
