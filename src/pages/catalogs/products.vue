@@ -37,6 +37,13 @@ interface CatalogoDef {
 
 const products = ref<Products | null>(null)
 
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(value)
+}
+
 const productsColumn: CatalogoDef = {
   titulo: 'Productos',
   subtitulo: 'Control y administración del inventario de productos de la sucursal.',
@@ -45,8 +52,32 @@ const productsColumn: CatalogoDef = {
   columns: [
     { key: 'description', label: 'Descripción', type: 'text' },
     { key: 'isSupply', label: 'Insumo', type: 'boolean' },
-    { key: 'costPrice', label: 'Precio de compra', type: 'currency' },
-    { key: 'salePrice', label: 'Precio de venta', type: 'currency' },
+
+    {
+      key: 'costPrice',
+      label: 'Precio de compra',
+      type: 'currency',
+      format: (value, row) => {
+        const unidades: Record<string, string> = {
+          Gramos: '/k',
+          Mililitros: '/l',
+          Unidades: '/u'
+        }
+
+        return `${formatCurrency(Number(value))} ${unidades[String(row.measureUnit)] ?? ''}`
+      }
+    },
+
+    {
+      key: 'salePrice',
+      label: 'Precio de venta',
+      type: 'currency',
+      format: (value, row) => {
+        if (row.isSupply) return 'Sin precio'
+        return formatCurrency(Number(value))
+      }
+    },
+
     { key: 'measureUnit', label: 'Unidad de medida', type: 'text' },
   ],
 }
@@ -230,13 +261,35 @@ const exportTable = () => {
   )
 }
 
+type Unidad = Storage['product']['measureUnit']
+
+const COSTO_POR: Record<Unidad, { etiqueta: string; factor: number }> = {
+  Unidades: { etiqueta: 'u', factor: 1 },
+  Gramos: { etiqueta: 'kg', factor: 1000 },
+  Mililitros: { etiqueta: 'l', factor: 1000 },
+}
+const convertirCostoVista = (costo: number, unidad: Unidad): number => {
+  return costo * COSTO_POR[unidad].factor
+}
+
 const loadProducts = async (p = 1) => {
   try{
     const { orderBy, isSupply } = getProductFilters()
     
     products.value = await getProducts(p, 20, filtro.busqueda, orderBy, isSupply)
+    console.log('Productos cargados:', products.value)
     page.value = products.value.page
     totalPages.value = products.value.totalPages
+    products.value = {
+      ...products.value,
+      items: products.value.items.map(product => ({
+        ...product,
+        costPrice: convertirCostoVista(
+          product.costPrice,
+          product.measureUnit
+        )
+      }))
+    }
   }
   catch(err){
     console.error('No se pudieron cargar los productos:', err)

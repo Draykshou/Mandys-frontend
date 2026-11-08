@@ -1,21 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { DollarSign, OctagonAlert, Trash2, FileText, X } from 'lucide-vue-next'
+import { ref, computed, onMounted } from 'vue'
+import { DollarSign, OctagonAlert, FileText, X } from 'lucide-vue-next'
 import type { Combo, CreateCombo, UpdateCombo } from '@/types/CombosDtos'
-import type { Dish } from '@/types/DishesDtos'
-import type { Product } from '@/types/ProductsDtos'
-import { getProducts } from '@/service/ProductsService'
-import { getDishes } from '@/service/DishesService'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
-
-interface ComboItem {
-  type: 'dish' | 'product'
-  id: number
-  name: string
-  quantity: number
-  dish?: Dish
-  product?: Product
-}
+import CombosContentModal from '@/components/modals/CombosContentModal.vue'
+import { precioTotal, type ComboItem } from '@/utils/comboPricing'
 
 const emit = defineEmits<{
   close: []
@@ -45,14 +34,7 @@ const props = withDefaults(
 const name = ref(props.combo?.name ?? '')
 const price = ref<number | null>(props.combo?.price ?? null)
 
-const availableDishes = ref<Dish[]>([])
-const availableProducts = ref<Product[]>([])
 const comboItems = ref<ComboItem[]>([])
-
-const search = ref('')
-const selectedItem = ref<ComboItem | null>(null)
-const quantity = ref<number | null>(null)
-const searchLoading = ref(false)
 
 const firstDeleteModel = ref(props.isDelete ?? '')
 const reasonModalEnable = ref(false)
@@ -67,115 +49,19 @@ const validate = computed(() => {
   )
 })
 
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
-let searchRequestId = 0
+// Precio de elaboración: suma de precio × cantidad de cada elemento del combo (solo informativo).
+const precioElaboracion = computed(() => precioTotal(comboItems.value))
 
-const searchItems = async () => {
-  const searchText = search.value.trim()
-
-  if (!searchText) {
-    availableDishes.value = []
-    availableProducts.value = []
-    return
-  }
-
-  const requestId = ++searchRequestId
-
-  try {
-    searchLoading.value = true
-
-    const [dishesResponse, productsResponse] = await Promise.all([
-      getDishes(1, 20, searchText),
-      getProducts(1, 20, searchText, 'description', false)
-    ])
-
-    if (requestId !== searchRequestId) return
-
-    availableDishes.value = dishesResponse.items
-    availableProducts.value = productsResponse.items
-  } catch (err) {
-    console.error('Could not search combo items:', err)
-
-    if (requestId === searchRequestId) {
-      availableDishes.value = []
-      availableProducts.value = []
-    }
-  } finally {
-    if (requestId === searchRequestId) {
-      searchLoading.value = false
-    }
-  }
+// El editor devuelve el contenido confirmado: se aplica y se vuelve al primer modal.
+const aplicarContenido = (nuevos: ComboItem[]) => {
+  comboItems.value = nuevos
+  contentEnable.value = false
 }
 
-const scheduleSearch = () => {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout)
-  }
-
-  searchTimeout = setTimeout(() => {
-    searchItems()
-  }, 300)
-}
-
-const searchResults = computed<ComboItem[]>(() => {
-  const dishes = availableDishes.value.map(dish => ({
-    type: 'dish' as const,
-    id: dish.id,
-    name: dish.name,
-    quantity: 1,
-    dish
-  }))
-
-  const products = availableProducts.value.map(product => ({
-    type: 'product' as const,
-    id: product.id,
-    name: product.description,
-    quantity: 1,
-    product
-  }))
-
-  return [...dishes, ...products]
-})
-
-const selectItem = (item: ComboItem) => {
-  selectedItem.value = item
-  search.value = item.name
-  availableDishes.value = []
-  availableProducts.value = []
-}
-
-const addItem = () => {
-  if (!selectedItem.value) return
-  if (quantity.value === null || quantity.value <= 0) return
-
-  const existingItem = comboItems.value.find(
-    item =>
-      item.type === selectedItem.value!.type &&
-      item.id === selectedItem.value!.id
-  )
-
-  if (existingItem) {
-    existingItem.quantity = quantity.value
-  } else {
-    comboItems.value.push({
-      ...selectedItem.value,
-      quantity: quantity.value
-    })
-  }
-
-  search.value = ''
-  selectedItem.value = null
-  quantity.value = null
-
-  availableDishes.value = []
-  availableProducts.value = []
-}
-
-const deleteItem = (item: ComboItem) => {
-  comboItems.value = comboItems.value.filter(
-    current =>
-      !(current.type === item.type && current.id === item.id)
-  )
+// Con el editor abierto, un clic en el fondo no cierra todo (se perderían los cambios).
+const cerrarPorFondo = () => {
+  if (contentEnable.value) return
+  emit('close')
 }
 
 const save = () => {
@@ -248,15 +134,6 @@ const changeDeleteModal = () => {
   firstDeleteModel.value = false
 }
 
-const closeContent = () => {
-  if (props.isAction) {
-    emit('close')
-    return
-  }
-
-  contentEnable.value = false
-}
-
 const exportarPdf = async () => {
   const { jsPDF } = await import('jspdf')
   const { autoTable } = await import('jspdf-autotable')
@@ -306,23 +183,18 @@ const exportarPdf = async () => {
 onMounted(() => {
   loadComboItems()
 })
-
-onBeforeUnmount(() => {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout)
-  }
-})
 </script>
 
 <template>
   <div
     class="fixed inset-0 z-50 flex items-center justify-center p-4"
     style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"
-    @click.self="emit('close')"
+    @click.self="cerrarPorFondo"
   >
     <!-- Modal principal -->
     <div
       v-if="!isDelete && !isAction"
+      v-show="!contentEnable"
       class="flex flex-col rounded-2xl shadow-2xl w-full max-w-xl bg-neutral-50 overflow-hidden"
       style="max-height: 92vh;"
     >
@@ -346,25 +218,48 @@ onBeforeUnmount(() => {
           />
         </div>
 
-        <div class="px-8 pt-4">
-          <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-            Precio
-            <span class="text-red-500">*</span>
-          </label>
+        <div class="flex flex-wrap gap-4 px-8 pt-4">
+          <div class="min-w-44 max-w-60 flex-1">
+            <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
+              Precio
+              <span class="text-red-500">*</span>
+            </label>
 
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-              <DollarSign :size="16" class="text-neutral-800" />
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <DollarSign :size="16" class="text-neutral-800" />
+              </div>
+
+              <input
+                v-model="price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                class="w-full pl-10 pr-4 py-3 border rounded-xl text-sm bg-neutral-100 text-neutral-800 font-medium transition-all focus:outline-none focus:ring-1"
+              />
             </div>
+          </div>
 
-            <input
-              v-model="price"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              class="w-full max-w-60 pl-10 pr-4 py-3 border rounded-xl text-sm bg-neutral-100 text-neutral-800 font-medium transition-all focus:outline-none focus:ring-1"
-            />
+          <!-- Solo informativo: se calcula con el contenido -->
+          <div class="min-w-44 max-w-60 flex-1">
+            <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
+              Precio de elaboración
+            </label>
+
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <DollarSign :size="16" class="text-neutral-800" />
+              </div>
+
+              <input
+                type="text"
+                readonly
+                tabindex="-1"
+                :value="precioElaboracion.toFixed(2)"
+                class="w-full pl-10 pr-4 py-3 border rounded-xl text-sm bg-neutral-200 text-neutral-700 font-medium cursor-default focus:outline-none"
+              />
+            </div>
           </div>
         </div>
 
@@ -376,7 +271,7 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-neutral-50 py-3 px-7 rounded-xl shadow-xl"
-            @click="contentEnable = !contentEnable"
+            @click="contentEnable = true"
           >
             Contenido
           </button>
@@ -403,9 +298,17 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- Modal de contenido -->
+    <!-- Editor de contenido (agregar / quitar platillos y productos) -->
+    <CombosContentModal
+      v-if="contentEnable && !isAction"
+      :items="comboItems"
+      @close="contentEnable = false"
+      @confirm="aplicarContenido"
+    />
+
+    <!-- Ver contenido (solo lectura) -->
     <div
-      v-if="contentEnable || isAction"
+      v-if="isAction"
       class="flex flex-col w-full max-w-2xl h-full max-h-170 rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden ml-6"
     >
       <div class="flex items-start justify-between border-b border-neutral-200 p-4 shrink-0">
@@ -423,7 +326,7 @@ onBeforeUnmount(() => {
           type="button"
           aria-label="Cerrar modal"
           class="ml-4 shrink-0 rounded-lg p-1 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-secondary-800"
-          @click="closeContent"
+          @click="emit('close')"
         >
           <X :size="22" />
         </button>
@@ -442,8 +345,6 @@ onBeforeUnmount(() => {
                   <th class="text-center px-4 py-3">
                     Cantidad
                   </th>
-
-                  <th class="w-16 px-4 py-3"></th>
                 </tr>
               </thead>
 
@@ -455,21 +356,11 @@ onBeforeUnmount(() => {
                 >
                   <td class="px-4 py-3"> {{ item.name }} </td>
                   <td class="px-4 py-3 text-center"> {{ item.quantity }} </td>
-                  <td class="px-4 py-3 text-center">
-                    <button
-                      v-if="!isAction"
-                      type="button"
-                      class="text-red-500 hover:text-red-700"
-                      @click="deleteItem(item)"
-                    >
-                      <Trash2 :size="18" />
-                    </button>
-                  </td>
                 </tr>
 
                 <tr v-if="comboItems.length === 0">
                   <td
-                    colspan="3"
+                    colspan="2"
                     class="px-4 py-8 text-center text-neutral-500"
                   >
                     No hay elementos en el combo.
@@ -481,75 +372,16 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="p-6 pt-0 shrink-0">
-        <div class="space-y-3">
-          <div class="flex gap-3">
-            <div class="flex-1 relative">
-              <input
-                v-if="!isAction"
-                v-model="search"
-                type="text"
-                placeholder="Buscar platillo o producto..."
-                class="w-full px-4 py-3 border rounded-xl"
-                @input="scheduleSearch"
-              />
-
-              <div
-                v-if="searchResults.length > 0"
-                class="absolute z-20 w-full bottom-full mb-1 bg-white border rounded-xl shadow-lg max-h-40 overflow-y-auto"
-              >
-                <button
-                  v-for="item in searchResults"
-                  :key="`${item.type}-${item.id}`"
-                  type="button"
-                  class="w-full text-left px-4 py-2 hover:bg-neutral-100"
-                  @click="selectItem(item)"
-                >
-                  {{ item.name }}
-                </button>
-              </div>
-
-              <div
-                v-if="searchLoading"
-                class="absolute z-20 w-full bottom-full mb-1 bg-white border rounded-xl shadow-lg px-4 py-3 text-neutral-500"
-              >
-                Buscando...
-              </div>
-            </div>
-
-            <input
-              v-if="!isAction"
-              v-model="quantity"
-              type="number"
-              min="1"
-              step="1"
-              placeholder="Cantidad"
-              class="w-32 px-4 py-3 border rounded-xl"
-            />
-          </div>
-
-          <div class="flex justify-center">
-            <button
-              v-if="!isAction"
-              type="button"
-              class="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed"
-              :disabled="!selectedItem || quantity === null || quantity <= 0"
-              @click="addItem"
-            >
-              Agregar
-            </button>
-            <button
-              v-if="isAction"
-              type="button"
-              class="w-full max-w-50 bg-primary-600 hover:bg-primary-500 active:bg-primary-400 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed
-              flex flex-row gap-2 justify-center"
-              @click="exportarPdf"
-              >
-              <FileText :size="24" class=" text-neutral-50"/>
-                Exportar PDF
-            </button>
-          </div>
-        </div>
+      <div class="p-6 pt-0 shrink-0 flex justify-center">
+        <button
+          type="button"
+          class="w-full max-w-50 bg-primary-600 hover:bg-primary-500 active:bg-primary-400 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed
+          flex flex-row gap-2 justify-center"
+          @click="exportarPdf"
+        >
+          <FileText :size="24" class=" text-neutral-50"/>
+          Exportar PDF
+        </button>
       </div>
     </div>
 

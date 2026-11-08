@@ -56,8 +56,11 @@ const validate = computed(() => {
 watch(isSupply, (newValue) => {
   if (newValue) {
     salePrice.value = 0
+    measureUnit.value = ''
+  } else {
+    measureUnit.value = 'Unidades'
   }
-})
+}, { immediate: true })
 
 const confirmDelete = () => {
   reasonModalEnable.value = false
@@ -126,9 +129,9 @@ const changeDeleteModal = () => {
                 Selecciona una unidad
               </option>
 
-              <option value="Gramos">Gramos</option>
-              <option value="Mililitros">Mililitros</option>
-              <option value="Unidades">Unidades</option>
+              <option v-if="isSupply" value="Gramos">Gramos</option>
+              <option v-if="isSupply" value="Mililitros">Mililitros</option>
+              <option value ="Unidades">Unidades</option>
             </select>
           </div>
                 
@@ -147,7 +150,7 @@ const changeDeleteModal = () => {
 
             <div v-if="!isSupply" class="my-8">
               <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-                Precio de venta
+                Precio de venta<span class="text-red-500">*</span>
               </label>
               <div class="relative">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">

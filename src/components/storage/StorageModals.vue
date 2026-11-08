@@ -2,18 +2,63 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { X, Search, Trash2, Check } from 'lucide-vue-next'
 import { getStorage } from '@/service/StorageService'
-import type { Storage, StorageIn } from '@/types/Storage'
+import type { Storage, StorageIn, StorageOut } from '@/types/Storage'
 
-const props = defineProps<{
-  branchId: number
-  /** Opcional: deshabilita "Confirmar entrada" mientras el padre manda la petición. */
-  enviando?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    branchId: number
+    /** 'entrada' (por defecto) o 'salida'. El resto del modal es igual. */
+    modo?: 'entrada' | 'salida'
+    /** Opcional: producto que ya aparece en la lista al abrir (atajo desde la tabla). */
+    productoInicial?: Storage
+    /** Opcional: deshabilita el botón de confirmar mientras el padre manda la petición. */
+    enviando?: boolean
+    isShortCut: boolean
+  }>(),
+  { modo: 'entrada' },
+)
 
 const emit = defineEmits<{
   close: []
   storageIn: [payload: StorageIn]
+  storageOut: [payload: StorageOut]
 }>()
+
+/* ---------------------------------------------------------------------------
+ * Textos y colores según el modo
+ * ------------------------------------------------------------------------- */
+
+const TEXTOS = {
+  entrada: {
+    titulo: 'Entrada de productos',
+    subtitulo: 'Elige los productos que van a ingresar al almacén y captura cantidad y costo.',
+    vacio: 'Elige un producto de la lista para agregarlo a la entrada.',
+    quitar: 'Quitar de la entrada',
+    hint: 'Completa folio, cantidad y costo.',
+    confirmar: 'Confirmar entrada',
+    confirmarTitulo: 'Confirmar entrada',
+    accion: 'la entrada',
+    destino: 'en el almacén',
+    revisar: 'Revisa que las cantidades y los costos sean correctos.',
+    boton: 'bg-green-700 hover:bg-green-800 active:bg-green-900',
+  },
+  salida: {
+    titulo: 'Salida de productos',
+    subtitulo: 'Elige los productos que van a salir del almacén y captura la cantidad.',
+    vacio: 'Elige un producto de la lista para agregarlo a la salida.',
+    quitar: 'Quitar de la salida',
+    hint: 'Completa el folio y revisa las cantidades.',
+    confirmar: 'Confirmar salida',
+    confirmarTitulo: 'Confirmar salida',
+    accion: 'la salida',
+    destino: 'del almacén',
+    revisar: 'Revisa que las cantidades sean correctas.',
+    boton: 'bg-red-700 hover:bg-red-800 active:bg-red-900',
+  },
+} as const
+
+const t = computed(() => TEXTOS[props.modo])
+const esEntrada = computed(() => props.modo === 'entrada')
 
 /* ---------------------------------------------------------------------------
  * Unidades
@@ -36,8 +81,8 @@ const abreviaturas: Record<Unidad, string> = {
 // El encabezado, los textos y el costPrice que se envía se ajustan solos.
 const COSTO_POR: Record<Unidad, { etiqueta: string; factor: number }> = {
   Unidades: { etiqueta: 'u', factor: 1 },
-  Gramos: { etiqueta: 'g', factor: 1 },
-  Mililitros: { etiqueta: 'ml', factor: 1 },
+  Gramos: { etiqueta: 'g', factor: 1000 },
+  Mililitros: { etiqueta: 'ml', factor: 1000 },
 }
 
 const encabezadoCosto = Object.values(COSTO_POR)
@@ -127,6 +172,7 @@ interface FilaEntrada {
 }
 
 const seleccionados = ref<FilaEntrada[]>([])
+const productoInicial = ref<Storage | null>(props.productoInicial ?? null)
 const tablaRef = ref<HTMLElement | null>(null)
 
 const idsAgregados = computed(
@@ -164,13 +210,24 @@ const onNumero = (e: Event, fila: FilaEntrada, campo: 'cantidad' | 'costo') => {
   fila[campo] = limpio
 }
 
-// Cantidad mayor a 0 y costo capturado en todas las filas.
-const entradaValida = computed(
+const folio = ref('')
+
+// En salida no se puede sacar más de lo que hay en stock.
+const excedeStock = (f: FilaEntrada) =>
+  !esEntrada.value && Number(f.cantidad) > f.storage.currentStock
+
+// Cantidad mayor a 0 y, según el modo: costo capturado (entrada) o dentro del stock (salida).
+const filaValida = (f: FilaEntrada) =>
+  Number(f.cantidad) > 0 &&
+  !excedeStock(f) &&
+  (!esEntrada.value || (f.costo !== '' && !Number.isNaN(Number(f.costo))))
+
+// Folio capturado + al menos un producto + todas las filas válidas.
+const movimientoValido = computed(
   () =>
+    folio.value.trim() !== '' &&
     seleccionados.value.length > 0 &&
-    seleccionados.value.every(
-      (f) => Number(f.cantidad) > 0 && f.costo !== '' && !Number.isNaN(Number(f.costo)),
-    ),
+    seleccionados.value.every(filaValida),
 )
 
 /* ---------------------------------------------------------------------------
@@ -179,8 +236,8 @@ const entradaValida = computed(
 
 const confirmando = ref(false)
 
-const construirPayload = (): StorageIn => ({
-  folio: '1',
+const construirEntrada = (): StorageIn => ({
+  folio: folio.value.trim(),
   products: seleccionados.value.map((f) => ({
     productId: f.storage.product.id,
     quantity: Number(f.cantidad),
@@ -189,9 +246,18 @@ const construirPayload = (): StorageIn => ({
   })),
 })
 
+const construirSalida = (): StorageOut => ({
+  folio: folio.value.trim(),
+  products: seleccionados.value.map((f) => ({
+    productId: f.storage.product.id,
+    quantity: Number(f.cantidad),
+  })),
+})
+
 const confirmar = () => {
   if (props.enviando) return
-  emit('storageIn', construirPayload())
+  if (esEntrada.value) emit('storageIn', construirEntrada())
+  else emit('storageOut', construirSalida())
 }
 
 // Clic en el fondo: solo cierra si todavía no se capturó nada.
@@ -199,7 +265,24 @@ const cerrarPorFondo = () => {
   if (seleccionados.value.length === 0) emit('close')
 }
 
-onMounted(loadMore)
+const close = () => {
+  console.log('Cerrando modal, limpiando seleccionados:', seleccionados.value)
+  seleccionados.value = []
+  console.log('Cerrando modal, limpiando seleccionados:', seleccionados.value)
+  emit('close')
+}
+
+onMounted(() => {
+  loadMore()
+  // Atajo desde la tabla: el producto ya aparece en la lista, con el cursor en la cantidad.
+  if (props.isShortCut) {
+    agregar(productoInicial.value as Storage)
+  }
+  else{
+    console.log('No hay producto inicial, limpiando seleccionados')
+    seleccionados.value = []
+  }
+})
 </script>
 
 <template>
@@ -216,9 +299,9 @@ onMounted(loadMore)
       <!-- Encabezado -->
       <div class="flex items-start justify-between gap-4 border-b border-neutral-200 px-6 py-4">
         <div>
-          <h3 class="text-3xl font-bold text-secondary-900">Entrada de productos</h3>
+          <h3 class="text-3xl font-bold text-secondary-900">{{ t.titulo }}</h3>
           <p class="text-neutral-500">
-            Elige los productos que van a ingresar al almacén y captura cantidad y costo.
+            {{ t.subtitulo }}
           </p>
         </div>
         <button
@@ -226,7 +309,7 @@ onMounted(loadMore)
           class="action-button"
           title="Cerrar"
           aria-label="Cerrar"
-          @click="emit('close')"
+          @click="close"
         >
           <X :size="18" />
         </button>
@@ -318,7 +401,7 @@ onMounted(loadMore)
               <colgroup>
                 <col />
                 <col class="w-44" />
-                <col class="w-44" />
+                <col v-if="esEntrada" class="w-44" />
               </colgroup>
 
               <thead>
@@ -329,7 +412,7 @@ onMounted(loadMore)
                   <th class="sticky top-0 z-10 border-b border-l border-neutral-200 bg-neutral-100 px-4 py-3 text-center text-label text-secondary-900">
                     Cantidad
                   </th>
-                  <th class="sticky top-0 z-10 border-b border-l border-neutral-200 bg-neutral-100 px-4 py-3 text-center text-label text-secondary-900">
+                  <th v-if="esEntrada" class="sticky top-0 z-10 border-b border-l border-neutral-200 bg-neutral-100 px-4 py-3 text-center text-label text-secondary-900">
                     Costo por {{ encabezadoCosto }}
                   </th>
                 </tr>
@@ -343,8 +426,8 @@ onMounted(loadMore)
                       <button
                         type="button"
                         class="action-button shrink-0 hover:bg-red-100 hover:text-red-600 active:bg-red-200"
-                        title="Quitar de la entrada"
-                        aria-label="Quitar de la entrada"
+                        :title="t.quitar"
+                        :aria-label="t.quitar"
                         @click="quitar(fila.storage.product.id)"
                       >
                         <Trash2 :size="16" />
@@ -368,7 +451,13 @@ onMounted(loadMore)
                         :value="fila.cantidad"
                         :data-cantidad="fila.storage.product.id"
                         :aria-label="`Cantidad de ${fila.storage.product.description}`"
-                        class="min-w-0 max-w-32 flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-body focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600"
+                        class="min-w-0 max-w-32 flex-1 rounded-lg border bg-white px-3 py-1.5 text-body focus:outline-none focus:ring-2"
+                        :class="
+                          excedeStock(fila)
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                            : 'border-neutral-300 focus:border-primary-600 focus:ring-primary-600'
+                        "
+                        :title="excedeStock(fila) ? 'Es mayor al stock disponible' : undefined"
                         @input="onNumero($event, fila, 'cantidad')"
                       />
                       <span class="w-6 shrink-0 text-caption text-neutral-500">
@@ -377,7 +466,7 @@ onMounted(loadMore)
                     </div>
                   </td>
 
-                  <td class="border-l border-neutral-200 px-4 py-3">
+                  <td v-if="esEntrada" class="border-l border-neutral-200 px-4 py-3">
                     <div class="flex items-center gap-2">
                       <input
                         type="text"
@@ -394,29 +483,43 @@ onMounted(loadMore)
                 </tr>
 
                 <tr v-if="seleccionados.length === 0">
-                  <td colspan="3" class="px-4 py-10 text-center text-neutral-500">
-                    Elige un producto de la lista para agregarlo a la entrada.
+                  <td :colspan="esEntrada ? 3 : 2" class="px-4 py-10 text-center text-neutral-500">
+                    {{ t.vacio }}
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <div class="flex items-center justify-end gap-4">
-            <p
-              v-if="seleccionados.length > 0 && !entradaValida"
-              class="text-caption text-neutral-500"
-            >
-              Captura la cantidad y el costo de todos los productos.
-            </p>
-            <button
-              type="button"
-              class="rounded-xl bg-green-700 px-5 py-2 text-label text-neutral-50 hover:bg-green-800 active:bg-green-900 disabled:cursor-not-allowed disabled:opacity-40"
-              :disabled="!entradaValida"
-              @click="confirmando = true"
-            >
-              Confirmar entrada
-            </button>
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <label for="folio-movimiento" class="text-label font-bold text-secondary-900">Folio:</label>
+              <input
+                id="folio-movimiento"
+                v-model="folio"
+                type="text"
+                autocomplete="off"
+                class="w-48 min-w-0 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-body focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600"
+              />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p
+                v-if="seleccionados.length > 0 && !movimientoValido"
+                class="text-right text-caption text-neutral-500"
+              >
+                {{ t.hint }}
+              </p>
+              <button
+                type="button"
+                class="shrink-0 rounded-xl px-5 py-2 text-label text-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                :class="t.boton"
+                :disabled="!movimientoValido"
+                @click="confirmando = true"
+              >
+                {{ t.confirmar }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -434,11 +537,12 @@ onMounted(loadMore)
       style="max-height: 85vh;"
     >
       <div class="border-b border-neutral-200 px-6 py-4">
-        <h3 class="text-title text-secondary-900" style="font-size: 1.125rem">Confirmar entrada</h3>
+        <h3 class="text-title text-secondary-900" style="font-size: 1.125rem">{{ t.confirmarTitulo }}</h3>
         <p class="text-caption text-neutral-500">
-          Se registrará la entrada de {{ seleccionados.length }}
-          {{ seleccionados.length === 1 ? 'producto' : 'productos' }} en el almacén.
-          Revisa que las cantidades y los costos sean correctos.
+          Se registrará {{ t.accion }} de {{ seleccionados.length }}
+          {{ seleccionados.length === 1 ? 'producto' : 'productos' }} {{ t.destino }}
+          con el folio <span class="font-semibold text-secondary-800">{{ folio.trim() }}</span>.
+          {{ t.revisar }}
         </p>
       </div>
 
@@ -453,7 +557,7 @@ onMounted(loadMore)
             <span class="font-semibold text-secondary-800">
               {{ fila.cantidad }} {{ abreviaturas[fila.storage.product.measureUnit] }}
             </span>
-            <span class="block text-caption text-neutral-500">
+            <span v-if="esEntrada" class="block text-caption text-neutral-500">
               a ${{ fila.costo }} por {{ COSTO_POR[fila.storage.product.measureUnit].etiqueta }}
             </span>
           </span>
@@ -470,11 +574,12 @@ onMounted(loadMore)
         </button>
         <button
           type="button"
-          class="rounded-xl bg-green-700 px-5 py-2 text-label text-neutral-50 hover:bg-green-800 active:bg-green-900 disabled:cursor-not-allowed disabled:opacity-40"
+          class="rounded-xl px-5 py-2 text-label text-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+          :class="t.boton"
           :disabled="enviando"
           @click="confirmar"
         >
-          Confirmar entrada
+          {{ t.confirmar }}
         </button>
       </div>
     </div>

@@ -17,6 +17,9 @@ export interface CatalogColumn {
 
   // Si la columna muestra solo texto o un boton
   emptyLabel?: string
+  
+  // Formato personalizado para mostrar el valor de una celda
+  format?: (value: unknown, row: Record<string, unknown>) => string
 }
 
 export type CatalogRow = Record<string, unknown> & { id: number | string }

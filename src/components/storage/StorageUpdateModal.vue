@@ -12,6 +12,18 @@ const emit = defineEmits<{
 }>()
 
 const newStockMinimum = ref<number>(props.stockMinimum);
+const canSave = ref<boolean>(true);
+
+const saveUpdate = () => {
+    if (String(newStockMinimum.value) === '') {
+        console.log('Valor inválido para stock mínimo:', newStockMinimum.value)
+        canSave.value = false
+        return
+    }
+
+    canSave.value = true
+    emit('save', newStockMinimum.value)
+}
 
 </script>
 
@@ -36,8 +48,12 @@ const newStockMinimum = ref<number>(props.stockMinimum);
             <input
               type="number"
               v-model.number="newStockMinimum"
+              min="0"
+              step="10"
               class="w-full rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-2 text-body text-secondary-800 placeholder:text-neutral-400 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
             />
+
+            <p v-if="!canSave" class="text-red-500 text-sm mt-2">Por favor, ingrese un valor válido para el stock mínimo.</p>
 
             <div class="flex justify-between">
               <button
@@ -50,7 +66,7 @@ const newStockMinimum = ref<number>(props.stockMinimum);
               <button
                 type="button"
                 class="ml-2 rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-                @click="emit('save', newStockMinimum)"
+                @click="saveUpdate"
               >
                 Guardar
               </button>

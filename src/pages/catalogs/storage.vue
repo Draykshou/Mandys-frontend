@@ -9,7 +9,7 @@ import appSidebar from '@/components/AppSidebar.vue'
 import useAuth from '@/composables/useAuth'
 import { getStorage, putStorage, inStorage, outStorage } from '@/service/StorageService'
 import { getBranches } from '@/service/BranchesService'
-import type { Storages, Storage, StorageIn } from '@/types/Storage'
+import type { Storages, Storage, StorageIn, StorageOut } from '@/types/Storage'
 import type { Branch } from '@/types/BranchesDtos'
 
 // UI interna
@@ -65,12 +65,38 @@ watch(selectedBranchId, (newId) => {
 const storageUpdateModal = ref(false)
 const storageInModal = ref(false)
 const storageOutModal = ref(false)
+const productoInicial = ref<Storage>()
+const enterOnShortCut = ref(false)
 
 const registrarEntrada = async (entrada: StorageIn) => {
   console.log(entrada)
   await inStorage(Number(selectedBranchId.value), entrada)
   storageInModal.value = false
   await loadStorage()
+}
+
+const abrirEntrada = (row?: Storage) => {
+  productoInicial.value = row
+  enterOnShortCut.value = true
+  storageInModal.value = true
+}
+
+const registrarSalida = async (salida: StorageOut) => {
+  await outStorage(Number(selectedBranchId.value), salida)
+  storageOutModal.value = false
+  await loadStorage()
+}
+
+const abrirSalida = (row?: Storage) => {
+  productoInicial.value = row
+  enterOnShortCut.value = true
+  storageOutModal.value = true
+}
+
+const closeModals = () => {
+  storageInModal.value = false
+  storageOutModal.value = false
+  enterOnShortCut.value = false
 }
 
 
@@ -116,13 +142,27 @@ onMounted( async () => {
           :branches="branches"
           v-model:selectedBranchId="selectedBranchId"
           @storage-in="storageInModal = true"
+          @storage-out="storageOutModal = true"
         /> 
 
         <StorageModals
           v-if="storageInModal"
+          modo="entrada"
           :branch-id="Number(selectedBranchId)"
-          @close="storageInModal = false"
+          :producto-inicial="productoInicial"
+          :is-short-cut="enterOnShortCut"
+          @close="closeModals"
           @storage-in="registrarEntrada"
+        />
+
+        <StorageModals
+          v-if="storageOutModal"
+          modo="salida"
+          :branch-id="Number(selectedBranchId)"
+          :producto-inicial="productoInicial"
+          :is-short-cut="enterOnShortCut"
+          @close="closeModals"
+          @storage-out="registrarSalida"
         />
 
         <StorageUpdateModal
@@ -141,6 +181,8 @@ onMounted( async () => {
           :total-paginas="totalPages"
           @cambiar-pagina="loadStorage"
           @editar="updateModalEnabled"
+          @entrada="abrirEntrada"
+          @salida="abrirSalida"
         />
       </div>
     </div>
