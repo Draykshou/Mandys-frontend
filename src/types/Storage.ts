@@ -9,7 +9,7 @@ export interface Storage {
 }
 
 export interface StorageUpdate{
-  minimunStock: number
+  minimumStock: number
 }
 
 export interface StorageIn {
@@ -26,7 +26,7 @@ export interface StorageOut {
     productId: number
     quantity: number
   }[]
-  folio: string | null
+  folio: string
 }
  
 export interface Storages {

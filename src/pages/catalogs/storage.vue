@@ -9,13 +9,14 @@ import appSidebar from '@/components/AppSidebar.vue'
 import useAuth from '@/composables/useAuth'
 import { getStorage, putStorage, inStorage, outStorage } from '@/service/StorageService'
 import { getBranches } from '@/service/BranchesService'
-import type { Storages, StorageIn } from '@/types/Storage'
+import type { Storages, Storage, StorageIn } from '@/types/Storage'
 import type { Branch } from '@/types/BranchesDtos'
 
 // UI interna
 import StorageHeader from '@/components/storage/StorageHeader.vue'
 import storageTable from '@/components/storage/storageTable.vue'
 import StorageModals from '@/components/storage/StorageModals.vue'
+import StorageUpdateModal from '@/components/storage/StorageUpdateModal.vue'
 
 const { state: auth} = useAuth()
 const rolUsuario = computed(() => auth.value.user?.role ?? '')
@@ -61,6 +62,7 @@ watch(selectedBranchId, (newId) => {
   }
 })
 
+const storageUpdateModal = ref(false)
 const storageInModal = ref(false)
 const storageOutModal = ref(false)
 
@@ -70,6 +72,28 @@ const registrarEntrada = async (entrada: StorageIn) => {
   storageInModal.value = false
   await loadStorage()
 }
+
+
+const selectUpdateRow = ref<Storage>()
+
+const updateModalEnabled = (row: Storage) => {
+  console.log('Actualizar stock mínimo para:', row)
+  selectUpdateRow.value = row
+  storageUpdateModal.value = true
+}
+
+const UpdateStorage = async (newStockMinimum: number) => {
+  if (!selectUpdateRow.value) return;
+
+  try {
+    console.log(`Stock mínimo actualizado para el producto ${selectUpdateRow.value.product.id}: ${newStockMinimum}`);
+    await putStorage(Number(selectedBranchId.value), selectUpdateRow.value.product.id, { minimumStock: newStockMinimum });
+    storageUpdateModal.value = false;
+    await loadStorage();
+  } catch (error) {
+    console.error('Error al actualizar el stock mínimo:', error);
+  }
+};
 
 onMounted( async () => {
   await loadBranches()
@@ -101,6 +125,14 @@ onMounted( async () => {
           @storage-in="registrarEntrada"
         />
 
+        <StorageUpdateModal
+          v-if="storageUpdateModal"
+          :product-name="selectUpdateRow?.product.description ?? ''"
+          :stock-minimum="selectUpdateRow?.minimumStock ?? 0"
+          @close="storageUpdateModal = false"
+          @save="UpdateStorage"
+        />
+
 
         <storageTable
           :rows="storages?.items ?? []"
@@ -108,8 +140,8 @@ onMounted( async () => {
           :pagina="page"
           :total-paginas="totalPages"
           @cambiar-pagina="loadStorage"
+          @editar="updateModalEnabled"
         />
-        
       </div>
     </div>
   </div>
