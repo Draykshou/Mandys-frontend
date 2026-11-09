@@ -7,12 +7,24 @@ const props = withDefaults(
     rolUsuario: string
     branches: Branch[]
     selectedBranchId: number | undefined
+    selectedBranchName?: string
   }>(),
   {
     rolUsuario: '',
     selectedBranchId: undefined,
+    selectedBranchName: ''
   },
 )
+
+const branchWrite = (): string => {
+  if(props.selectedBranchName != ''){
+    return ': ' + String(props.selectedBranchName)
+  }
+  else{
+    return ''
+  }
+}
+
 
 const emit = defineEmits<{
   storageIn: []
@@ -25,8 +37,9 @@ const emit = defineEmits<{
   <div class="mb-6 flex items-start justify-between">
     <div class="flex gap-8">
       <div>
-        <h2 class="text-title text-secondary-900">{{ 'Gestion de almacen' }}</h2>
-        <p class="mt-1 text-body text-neutral-600">{{ 'Gestiona las entradas y salidas del almacen' }}</p>
+        <h2 v-if="rolUsuario === 'Encargado de Almacen'" class="text-title text-secondary-900">Gestion de almacen{{ branchWrite() }}</h2>
+        <h2 v-else class="text-title text-secondary-900">Gestion de almacen</h2>
+        <p class="mt-1 text-body text-neutral-600">Gestiona las entradas y salidas del almacen</p>
       </div>
       <div 
           v-if="rolUsuario === 'Encargado de Almacen Central' || rolUsuario === 'Administrador'"

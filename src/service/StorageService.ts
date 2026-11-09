@@ -35,3 +35,39 @@ export async function outStorage(branchId: number, payload: StorageOut) {
     const response = await api.post<StorageOut>(`/branches/${branchId}/storage/out`, payload)
     return response.data
 }
+
+
+export async function getOneStorage(
+    page = 1,
+    pageSize = 20,
+    search = '',
+    orderBy = '',
+    isSupply: boolean | null = null
+){
+    const response = await api.get<Storages>(`/storage`, {
+        params: {
+            page,
+            pageSize,
+            search: search || undefined,
+            orderBy,
+            isSupply
+        }
+    })
+    return response.data
+}
+
+export async function putOneStorage(productId: number, payload: StorageUpdate) {
+    const response = await api.put<StorageUpdate>(`/storage/${productId}`, payload)
+    return response.data
+}
+
+export async function inOneStorage(payload: StorageIn) {
+    const response = await api.post<StorageIn>(`/storage/in`, payload)
+    return response.data
+}
+
+export async function outOneStorage(payload: StorageOut) {
+    const response = await api.post<StorageOut>(`/storage/out`, payload)
+    return response.data
+}
+

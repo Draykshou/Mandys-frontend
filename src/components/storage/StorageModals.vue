@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { X, Search, Trash2, Check } from 'lucide-vue-next'
-import { getStorage } from '@/service/StorageService'
+import { getStorage, getOneStorage } from '@/service/StorageService'
 import type { Storage, StorageIn, StorageOut } from '@/types/Storage'
 
 const props = withDefaults(
@@ -14,6 +14,7 @@ const props = withDefaults(
     /** Opcional: deshabilita el botón de confirmar mientras el padre manda la petición. */
     enviando?: boolean
     isShortCut: boolean
+    rolUsuario: string
   }>(),
   { modo: 'entrada' },
 )
@@ -124,25 +125,48 @@ const loadMore = async () => {
   loading.value = true
   error.value = ''
 
-  try {
-    const res = await getStorage(
-      props.branchId,
-      page.value + 1,
-      PAGE_SIZE,
-      terminoAplicado.value,
-      'description',
-      null,
-    )
-    if (miVersion !== version) return
-    items.value.push(...res.items)
-    page.value = res.page
-    totalPages.value = res.totalPages
-  } catch (err) {
-    if (miVersion !== version) return
-    console.error('No se pudo cargar el inventario:', err)
-    error.value = 'No se pudo cargar el inventario.'
-  } finally {
-    if (miVersion === version) loading.value = false
+  if(props.rolUsuario === 'Encargado de Almacen'){
+    try {
+      const res = await getOneStorage(
+        page.value + 1,
+        PAGE_SIZE,
+        terminoAplicado.value,
+        'description',
+        null,
+      )
+      if (miVersion !== version) return
+      items.value.push(...res.items)
+      page.value = res.page
+      totalPages.value = res.totalPages
+    } catch (err) {
+      if (miVersion !== version) return
+      console.error('No se pudo cargar el inventario:', err)
+      error.value = 'No se pudo cargar el inventario.'
+    } finally {
+      if (miVersion === version) loading.value = false
+    }
+  }
+  else{
+    try {
+      const res = await getStorage(
+        props.branchId,
+        page.value + 1,
+        PAGE_SIZE,
+        terminoAplicado.value,
+        'description',
+        null,
+      )
+      if (miVersion !== version) return
+      items.value.push(...res.items)
+      page.value = res.page
+      totalPages.value = res.totalPages
+    } catch (err) {
+      if (miVersion !== version) return
+      console.error('No se pudo cargar el inventario:', err)
+      error.value = 'No se pudo cargar el inventario.'
+    } finally {
+      if (miVersion === version) loading.value = false
+    }
   }
 }
 
@@ -254,7 +278,7 @@ const construirSalida = (): StorageOut => ({
   folio: folio.value.trim(),
   products: seleccionados.value.map((f) => ({
     productId: f.storage.product.id,
-    quantity: Number(f.cantidad),
+    quantity: Number(f.cantidad) * CONVERSIONES[f.storage.product.measureUnit].factor,
   })),
 })
 

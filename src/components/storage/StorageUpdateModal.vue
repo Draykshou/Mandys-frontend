@@ -39,6 +39,11 @@ const saveUpdate = () => {
         canSave.value = false
         return
     }
+    else if(newStockMinimum.value <= 0){
+      console.log('Valor inválido para stock mínimo:', newStockMinimum.value)
+      canSave.value = false
+      return
+    }
 
     canSave.value = true
     emit('save', decreaseUnit(newStockMinimum.value, props.measureUnit))

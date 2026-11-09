@@ -1,13 +1,14 @@
 <script setup lang="ts"> 
-import { ref, onMounted, computed, watch} from 'vue'
+import { ref, onMounted, computed, watch, reactive} from 'vue'
 
 // UI Externa
 import AppHeader from '@/components/AppHeader.vue'
 import appSidebar from '@/components/AppSidebar.vue'
+import CatalogFilter from '@/components/CatalogFilter.vue'
 
 // Services y tipos
 import useAuth from '@/composables/useAuth'
-import { getStorage, putStorage, inStorage, outStorage } from '@/service/StorageService'
+import { getStorage, putStorage, inStorage, outStorage, getOneStorage, inOneStorage, outOneStorage} from '@/service/StorageService'
 import { getBranches } from '@/service/BranchesService'
 import type { Storages, Storage, StorageIn, StorageOut } from '@/types/Storage'
 import type { Branch } from '@/types/BranchesDtos'
@@ -17,6 +18,74 @@ import StorageHeader from '@/components/storage/StorageHeader.vue'
 import storageTable from '@/components/storage/storageTable.vue'
 import StorageModals from '@/components/storage/StorageModals.vue'
 import StorageUpdateModal from '@/components/storage/StorageUpdateModal.vue'
+
+// Filtro
+
+const categoriasFiltro = ['Todos', 'Alfabetico A-Z', 'Alfabetico Z-A', 'Cantidad de Stock (ascendente)', 'Cantidad de Stock (descendente)', 'Mayor costo', 'Menor costo', 'Es Insumo', 'No es Insumo', 'Mas reciente', 'Mas antiguo']
+
+const filtro = reactive({
+  busqueda: '',
+  categoria: categoriasFiltro[0],
+})
+
+
+function limpiarFiltro() {
+  filtro.busqueda = ''
+  filtro.categoria = categoriasFiltro[0]
+}
+
+const search = async () => {
+  await loadStorage(1)
+}
+
+const getStorageFilter = () => {
+  let orderBy = ''
+  let isSupply: boolean | null = null
+
+  switch (filtro.categoria) {
+    case 'Alfabetico A-Z':
+      orderBy = 'description'
+      break
+
+    case 'Alfabetico Z-A':
+      orderBy = '-description'
+      break
+    case 'Cantidad de Stock (ascendente)':
+      orderBy = 'currentStock'
+      break
+    case 'Cantidad de Stock (descendente)':
+      orderBy = '-currentStock'
+      break
+    case 'Mayor costo':
+      orderBy = '-costPrice'
+      break
+    case 'Menor costo':
+      orderBy = 'costPrice'
+      break
+    case 'Es Insumo':
+      isSupply = true
+      break
+    case 'No es Insumo':
+      isSupply = false
+      break
+    case 'Mas reciente':
+      orderBy = '-lastUpdated'
+      break
+    case 'Mas antiguo':
+      orderBy = 'lastUpdated'
+      break
+    default:
+      orderBy = 'description'
+      break
+  }
+  return {
+    orderBy,
+    isSupply
+  }
+}
+
+
+// Cargar sucusarl y definir parametros
 
 const { state: auth} = useAuth()
 const rolUsuario = computed(() => auth.value.user?.role ?? '')
@@ -35,9 +104,15 @@ const loadBranches = async () => {
     branches.value = items;
 
     // Seleccionar la primera sucursal por defecto
-    if (branches.value.length > 0) {
+    if (branches.value.length > 0 && (rolUsuario.value === "Encargado de Almacen Central" || rolUsuario.value === "Administrador")) {
       selectedBranchId.value = branches.value[0].id;
       selectedBranchName.value = branches.value[0].name;
+      console.log('Cargar sucursal: ' + selectedBranchId.value)
+    }
+    else if(branches.value.length > 0 && rolUsuario.value === "Encargado de Almacen"){
+      selectedBranchId.value = auth.value.user?.branchId
+      selectedBranchName.value = branches.value.find(b => b.id === selectedBranchId.value)?.name ?? '' 
+      console.log('Cargar sucursal con id: ' + selectedBranchId.value + '. Y nombre: ' + selectedBranchName.value)
     }
   } catch (error) {
     console.error('Error al cargar sucursales:', error);
@@ -46,8 +121,15 @@ const loadBranches = async () => {
 
 const loadStorage = async (p = 1) => {
   try {
+    const { orderBy, isSupply } = getStorageFilter()
+
+    if(rolUsuario.value === "Encargado de Almacen"){
+      storages.value = await getOneStorage(p, 20, filtro.busqueda, orderBy, isSupply)
+    }
+    else{
+      storages.value = await getStorage(selectedBranchId.value as number, p, 20, filtro.busqueda, orderBy, isSupply)
+    }
     console.log('Cargando inventario para la sucursal:', selectedBranchId.value)
-    storages.value = await getStorage(selectedBranchId.value as number, p, 20, '', 'description', null)
     page.value = storages.value.page
     totalPages.value = storages.value.totalPages
     console.log('Inventario cargado:', storages.value)
@@ -62,6 +144,8 @@ watch(selectedBranchId, (newId) => {
   }
 })
 
+// Entradas y salidas
+
 const storageUpdateModal = ref(false)
 const storageInModal = ref(false)
 const storageOutModal = ref(false)
@@ -70,7 +154,12 @@ const enterOnShortCut = ref(false)
 
 const registrarEntrada = async (entrada: StorageIn) => {
   console.log(entrada)
-  await inStorage(Number(selectedBranchId.value), entrada)
+  if(rolUsuario.value === "Encargado de Almacen"){
+    await inOneStorage(entrada)
+  }
+  else{
+    await inStorage(Number(selectedBranchId.value), entrada)
+  }
   storageInModal.value = false
   await loadStorage()
 }
@@ -82,7 +171,12 @@ const abrirEntrada = (row?: Storage) => {
 }
 
 const registrarSalida = async (salida: StorageOut) => {
-  await outStorage(Number(selectedBranchId.value), salida)
+  if(rolUsuario.value === "Encargado de Almacen"){
+    await outOneStorage(salida)
+  }
+  else{
+    await outStorage(Number(selectedBranchId.value), salida)
+  }
   storageOutModal.value = false
   await loadStorage()
 }
@@ -141,13 +235,23 @@ onMounted( async () => {
           :rol-usuario="rolUsuario"
           :branches="branches"
           v-model:selectedBranchId="selectedBranchId"
+          :selected-branch-name="selectedBranchName"
           @storage-in="storageInModal = true"
           @storage-out="storageOutModal = true"
         /> 
 
+        <CatalogFilter
+          v-model:busqueda="filtro.busqueda"
+          v-model:categoria="filtro.categoria"
+          :categorias="categoriasFiltro"
+          @buscar="search"
+          @limpiar="limpiarFiltro"
+        />
+
         <StorageModals
           v-if="storageInModal"
           modo="entrada"
+          :rol-usuario="rolUsuario"
           :branch-id="Number(selectedBranchId)"
           :producto-inicial="productoInicial"
           :is-short-cut="enterOnShortCut"
@@ -158,6 +262,7 @@ onMounted( async () => {
         <StorageModals
           v-if="storageOutModal"
           modo="salida"
+          :rol-usuario="rolUsuario"
           :branch-id="Number(selectedBranchId)"
           :producto-inicial="productoInicial"
           :is-short-cut="enterOnShortCut"
