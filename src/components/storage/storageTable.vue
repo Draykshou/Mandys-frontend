@@ -57,6 +57,21 @@ function formatFecha(valor: string | null) {
   return Number.isNaN(fecha.getTime()) ? '—' : formatoFecha.format(fecha)
 }
 
+type Unidad = Storage['product']['measureUnit']
+
+const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
+  Unidades: { etiqueta: 'u', factor: 1 },
+  Gramos: { etiqueta: 'kg', factor: 1000 },
+  Mililitros: { etiqueta: 'l', factor: 1000 },
+}
+const convertirCostoVista = (costo: number, unidad: Unidad): string => {
+  return '$ ' + String(costo * CONVERSIONES[unidad].factor) + ' ' + CONVERSIONES[unidad].etiqueta
+}
+
+const convertirStockVista = (stock: number, unidad: Unidad): string => {
+  return String(stock / CONVERSIONES[unidad].factor) + ' ' + CONVERSIONES[unidad].etiqueta
+}
+
 const rangoMostrado = computed(() => {
   if (props.rows.length === 0) return '0'
   const inicio = (props.pagina - 1) * props.rows.length + 1
@@ -83,7 +98,9 @@ const rangoMostrado = computed(() => {
           <tr class="border-b border-neutral-100 bg-neutral-100/60 text-caption uppercase tracking-wide text-neutral-500">
             <th class="px-6 py-3 text-left">Nombre</th>
             <th class="px-6 py-3 text-center">Stock</th>
+            <th class="px-6 py-3 text-center">Costo</th>
             <th class="px-6 py-3 text-center">Stock Minimo</th>
+            <th class="px-6 py-3 text-center">Ultima Actualización</th>
             <th class="px-6 py-3 text-right">Acciones</th>
           </tr>
         </thead>
@@ -106,12 +123,14 @@ const rangoMostrado = computed(() => {
               class="px-6 py-4 text-center font-semibold"
               :class="enAlerta(row) ? 'text-red-700' : 'text-secondary-800'"
             >
-              {{ row.currentStock }}
+              {{ convertirStockVista(row.currentStock, row.product.measureUnit) }}
             </td>
+
+            <td class="px-6 py-4 text-center text-primary-800">{{ convertirCostoVista(row.product.costPrice, row.product.measureUnit) }}</td>
 
             <td class="px-6 py-4 text-center text-secondary-800">
                 <div class="flex items-center justify-center gap-4">
-                    {{ row.minimumStock }}
+                    {{ convertirStockVista(row.minimumStock, row.product.measureUnit) }}
                     <button
                     type="button"
                     class="action-button hover:bg-blue-100 hover:text-blue-700 active:bg-blue-200"
@@ -121,6 +140,12 @@ const rangoMostrado = computed(() => {
                     >
                     <Pencil :size="16" />
                     </button>
+                </div>
+            </td>
+
+            <td class="px-6 py-4 text-center text-secondary-800">
+                <div class="flex items-center justify-center gap-4">
+                    {{ row.lastUpdated ? formatFecha(row.lastUpdated) : '—' }}
                 </div>
             </td>
 

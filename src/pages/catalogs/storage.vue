@@ -47,7 +47,7 @@ const loadBranches = async () => {
 const loadStorage = async (p = 1) => {
   try {
     console.log('Cargando inventario para la sucursal:', selectedBranchId.value)
-    storages.value = await getStorage(selectedBranchId.value as number, p, 20, '', '', null)
+    storages.value = await getStorage(selectedBranchId.value as number, p, 20, '', 'description', null)
     page.value = storages.value.page
     totalPages.value = storages.value.totalPages
     console.log('Inventario cargado:', storages.value)
@@ -169,6 +169,7 @@ onMounted( async () => {
           v-if="storageUpdateModal"
           :product-name="selectUpdateRow?.product.description ?? ''"
           :stock-minimum="selectUpdateRow?.minimumStock ?? 0"
+          :measure-unit="selectUpdateRow?.product.measureUnit ?? ''"
           @close="storageUpdateModal = false"
           @save="UpdateStorage"
         />

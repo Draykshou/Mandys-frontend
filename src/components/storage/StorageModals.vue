@@ -69,8 +69,8 @@ type Unidad = Storage['product']['measureUnit']
 // Cómo se muestran stock y cantidad (siempre en la unidad base).
 const abreviaturas: Record<Unidad, string> = {
   Unidades: 'u',
-  Gramos: 'g',
-  Mililitros: 'ml',
+  Gramos: 'kg',
+  Mililitros: 'l',
 }
 
 // Cómo se captura el COSTO.
@@ -79,13 +79,17 @@ const abreviaturas: Record<Unidad, string> = {
 //   Gramos:     { etiqueta: 'kg', factor: 1000 },
 //   Mililitros: { etiqueta: 'L',  factor: 1000 },
 // El encabezado, los textos y el costPrice que se envía se ajustan solos.
-const COSTO_POR: Record<Unidad, { etiqueta: string; factor: number }> = {
+const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
   Unidades: { etiqueta: 'u', factor: 1 },
-  Gramos: { etiqueta: 'g', factor: 1000 },
-  Mililitros: { etiqueta: 'ml', factor: 1000 },
+  Gramos: { etiqueta: 'kg', factor: 1000 },
+  Mililitros: { etiqueta: 'l', factor: 1000 },
 }
 
-const encabezadoCosto = Object.values(COSTO_POR)
+const convertirStockVista = (stock: number, unidad: Unidad): string => {
+  return String(stock / CONVERSIONES[unidad].factor) + ' ' + CONVERSIONES[unidad].etiqueta
+}
+
+const encabezadoCosto = Object.values(CONVERSIONES)
   .map((c) => c.etiqueta)
   .join('/')
 
@@ -240,9 +244,9 @@ const construirEntrada = (): StorageIn => ({
   folio: folio.value.trim(),
   products: seleccionados.value.map((f) => ({
     productId: f.storage.product.id,
-    quantity: Number(f.cantidad),
-    // El costo se captura en la unidad de COSTO_POR; al back va siempre por unidad base.
-    costPrice: Number(f.costo) / COSTO_POR[f.storage.product.measureUnit].factor,
+    quantity: Number(f.cantidad) * CONVERSIONES[f.storage.product.measureUnit].factor,
+    // El costo se captura en la unidad de CONVERSIONES; al back va siempre por unidad base.
+    costPrice: Number(f.costo) / CONVERSIONES[f.storage.product.measureUnit].factor,
   })),
 })
 
@@ -361,8 +365,8 @@ onMounted(() => {
                 class="pt-2 text-caption"
                 :class="enAlerta(row) ? 'text-red-700' : 'text-neutral-500'"
               >
-                Stock: {{ formatCantidad(row.currentStock, row.product.measureUnit) }}
-                / Stock Min: {{ formatCantidad(row.minimumStock, row.product.measureUnit) }}
+                Stock: {{ convertirStockVista(row.currentStock, row.product.measureUnit) }}
+                / Stock Min: {{ convertirStockVista(row.minimumStock, row.product.measureUnit) }}
               </p>
             </button>
 
@@ -413,7 +417,7 @@ onMounted(() => {
                     Cantidad
                   </th>
                   <th v-if="esEntrada" class="sticky top-0 z-10 border-b border-l border-neutral-200 bg-neutral-100 px-4 py-3 text-center text-label text-secondary-900">
-                    Costo por {{ encabezadoCosto }}
+                    Costo por K/L/U
                   </th>
                 </tr>
               </thead>
@@ -437,8 +441,8 @@ onMounted(() => {
                       class="pt-2 text-caption"
                       :class="enAlerta(fila.storage) ? 'text-red-700' : 'text-neutral-500'"
                     >
-                      Stock: {{ formatCantidad(fila.storage.currentStock, fila.storage.product.measureUnit) }}
-                      / Stock Min: {{ formatCantidad(fila.storage.minimumStock, fila.storage.product.measureUnit) }}
+                      Stock: {{ convertirStockVista(fila.storage.currentStock, fila.storage.product.measureUnit) }}
+                      / Stock Min: {{ convertirStockVista(fila.storage.minimumStock, fila.storage.product.measureUnit) }}
                     </p>
                   </td>
 
@@ -473,7 +477,7 @@ onMounted(() => {
                         inputmode="decimal"
                         autocomplete="off"
                         :value="fila.costo"
-                        :aria-label="`Costo por ${COSTO_POR[fila.storage.product.measureUnit].etiqueta} de ${fila.storage.product.description}`"
+                        :aria-label="`Costo por ${CONVERSIONES[fila.storage.product.measureUnit].etiqueta} de ${fila.storage.product.description}`"
                         class="min-w-0 max-w-32 flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-body focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600"
                         @input="onNumero($event, fila, 'costo')"
                       />
@@ -558,7 +562,7 @@ onMounted(() => {
               {{ fila.cantidad }} {{ abreviaturas[fila.storage.product.measureUnit] }}
             </span>
             <span v-if="esEntrada" class="block text-caption text-neutral-500">
-              a ${{ fila.costo }} por {{ COSTO_POR[fila.storage.product.measureUnit].etiqueta }}
+              a ${{ fila.costo }} por {{ CONVERSIONES[fila.storage.product.measureUnit].etiqueta }}
             </span>
           </span>
         </li>

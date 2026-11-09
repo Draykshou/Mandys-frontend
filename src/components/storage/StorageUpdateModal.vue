@@ -4,6 +4,7 @@ import { ref } from 'vue'
 const props = defineProps<{
   productName: string;
   stockMinimum: number;
+  measureUnit: string;
 }>()
 
 const emit = defineEmits<{
@@ -11,8 +12,26 @@ const emit = defineEmits<{
     save: [newStockMinimum: number]
 }>()
 
-const newStockMinimum = ref<number>(props.stockMinimum);
+
+type Unidad = string
+
+const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
+  Unidades: { etiqueta: 'u', factor: 1 },
+  Gramos: { etiqueta: 'kg', factor: 1000 },
+  Mililitros: { etiqueta: 'l', factor: 1000 },
+}
+
+const increaseUnit = (stock: number, unidad: Unidad): number => {
+  return stock / CONVERSIONES[unidad].factor
+}
+
+const decreaseUnit = (stock: number, unidad: Unidad): number => {
+  return stock * CONVERSIONES[unidad].factor
+}
+
+const newStockMinimum = ref<number>(increaseUnit(props.stockMinimum, props.measureUnit));
 const canSave = ref<boolean>(true);
+
 
 const saveUpdate = () => {
     if (String(newStockMinimum.value) === '') {
@@ -22,7 +41,7 @@ const saveUpdate = () => {
     }
 
     canSave.value = true
-    emit('save', newStockMinimum.value)
+    emit('save', decreaseUnit(newStockMinimum.value, props.measureUnit))
 }
 
 </script>
@@ -45,13 +64,18 @@ const saveUpdate = () => {
         <!-- Contenido del modal -->
          <div class="flex flex-col gap-4 p-6">
             <h2 class="font-semibold">Nuevo stock mínimo</h2>
-            <input
-              type="number"
-              v-model.number="newStockMinimum"
-              min="0"
-              step="10"
-              class="w-full rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-2 text-body text-secondary-800 placeholder:text-neutral-400 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-            />
+            <div class="flex items-center">
+              <input
+                type="number"
+                v-model.number="newStockMinimum"
+                min="0"
+                step="10"
+                class="w-full rounded-l-lg border border-neutral-300 bg-neutral-50 px-4 py-2"
+              />
+              <p class="rounded-r-lg border border-l-0 border-neutral-300 bg-neutral-100 px-3 py-2 text-secondary-700">
+                {{ CONVERSIONES[props.measureUnit].etiqueta}}
+              </p>
+            </div>
 
             <p v-if="!canSave" class="text-red-500 text-sm mt-2">Por favor, ingrese un valor válido para el stock mínimo.</p>
 

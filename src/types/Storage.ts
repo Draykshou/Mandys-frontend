@@ -6,6 +6,7 @@ export interface Storage {
   product: Product
   minimumStock: number
   currentStock: number
+  lastUpdated: string
 }
 
 export interface StorageUpdate{
