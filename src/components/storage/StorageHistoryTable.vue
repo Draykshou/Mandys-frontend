@@ -131,38 +131,18 @@ const rangoMostrado = computed(() => {
                         </td>
 
                         <td class="px-6 py-4 text-center text-secondary-800">
-
+                            <button class="p-2 rounded-3xl text-sm bg-neutral-50 border border-neutral-200 text-secondary-800"
+                                :class="paintRow(row)
+                                ? ' hover:border-green-600 hover:text-green-600 active:border-green-700 active:text-green-700 active:bg-neutral-100'
+                                : ' hover:border-red-600 hover:text-red-600 active:border-red-700 active:text-red-700 active:bg-neutral-100'
+                                ">
+                                Ver Detalles
+                            </button>
                         </td>
 
                         <td class="px-6 py-4 text-center text-secondary-800">
                             <div class="flex items-center justify-center gap-4">
-
-                                <button type="button"
-                                    class="action-button hover:bg-blue-100 hover:text-blue-700 active:bg-blue-200"
-                                    title="Editar" aria-label="Editar">
-                                    <Pencil :size="16" />
-                                </button>
-                            </div>
-                        </td>
-
-                        <td class="px-6 py-4 text-center text-secondary-800">
-                            <div class="flex items-center justify-center gap-4">
-                                
-                            </div>
-                        </td>
-
-                        <td class="px-6 py-4">
-                            <div class="flex items-center justify-end gap-2">
-                                <button type="button"
-                                    class="action-button hover:bg-green-100 hover:text-green-700 active:bg-green-200"
-                                    title="Entrada" aria-label="Registrar entrada">
-                                    <ArrowUp :size="18" />
-                                </button>
-                                <button type="button"
-                                    class="action-button hover:bg-red-100 hover:text-red-600 active:bg-red-200"
-                                    title="Salida" aria-label="Registrar salida">
-                                    <ArrowDown :size="18" />
-                                </button>
+                                {{ formatFecha(row.date) }}
                             </div>
                         </td>
                     </tr>
