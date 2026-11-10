@@ -11,6 +11,7 @@ import {
   Store,
   Users,
   Warehouse,
+  Salad,
 } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import useAuth from '@/composables/useAuth'
@@ -56,7 +57,7 @@ const menuItems = computed(() => [
   {
     key: 'dishes',
     label: 'Platillos',
-    icon: ShoppingCart,
+    icon: Salad,
     path: '/catalogs/dishes',
     roles: ['Administrador', 'Gerente de Operaciones'],
   },
