@@ -70,8 +70,8 @@ type Unidad = Storage['product']['measureUnit']
 // Cómo se muestran stock y cantidad (siempre en la unidad base).
 const abreviaturas: Record<Unidad, string> = {
   Unidades: 'u',
-  Gramos: 'kg',
-  Mililitros: 'l',
+  Kilogramos: 'kg',
+  Litros: 'l',
 }
 
 // Cómo se captura el COSTO.
@@ -82,8 +82,8 @@ const abreviaturas: Record<Unidad, string> = {
 // El encabezado, los textos y el costPrice que se envía se ajustan solos.
 const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
   Unidades: { etiqueta: 'u', factor: 1 },
-  Gramos: { etiqueta: 'kg', factor: 1000 },
-  Mililitros: { etiqueta: 'l', factor: 1000 },
+  Kilogramos: { etiqueta: 'kg', factor: 1 },
+  Litros: { etiqueta: 'l', factor: 1 },
 }
 
 const convertirStockVista = (stock: number, unidad: Unidad): string => {
@@ -125,7 +125,7 @@ const loadMore = async () => {
   loading.value = true
   error.value = ''
 
-  if(props.rolUsuario === 'Encargado de Almacen'){
+  if (props.rolUsuario === 'Encargado de Almacen') {
     try {
       const res = await getOneStorage(
         page.value + 1,
@@ -146,7 +146,7 @@ const loadMore = async () => {
       if (miVersion === version) loading.value = false
     }
   }
-  else{
+  else {
     try {
       const res = await getStorage(
         props.branchId,
@@ -239,6 +239,9 @@ const onNumero = (e: Event, fila: FilaEntrada, campo: 'cantidad' | 'costo') => {
 }
 
 const folio = ref('')
+const supplierName = ref('')
+type StorageOutReason = 'TRASPASO' | 'MERMA'
+const reason = ref<StorageOutReason>('TRASPASO')
 
 // En salida no se puede sacar más de lo que hay en stock.
 const excedeStock = (f: FilaEntrada) =>
@@ -266,6 +269,7 @@ const confirmando = ref(false)
 
 const construirEntrada = (): StorageIn => ({
   folio: folio.value.trim(),
+  supplierName: supplierName.value.trim(),
   products: seleccionados.value.map((f) => ({
     productId: f.storage.product.id,
     quantity: Number(f.cantidad) * CONVERSIONES[f.storage.product.measureUnit].factor,
@@ -275,7 +279,7 @@ const construirEntrada = (): StorageIn => ({
 })
 
 const construirSalida = (): StorageOut => ({
-  folio: folio.value.trim(),
+  reason: reason.value,
   products: seleccionados.value.map((f) => ({
     productId: f.storage.product.id,
     quantity: Number(f.cantidad) * CONVERSIONES[f.storage.product.measureUnit].factor,
@@ -306,7 +310,7 @@ onMounted(() => {
   if (props.isShortCut) {
     agregar(productoInicial.value as Storage)
   }
-  else{
+  else {
     console.log('No hay producto inicial, limpiando seleccionados')
     seleccionados.value = []
   }
@@ -315,15 +319,10 @@ onMounted(() => {
 
 <template>
   <!-- Paso 1: captura (se oculta con v-show para no perder la lista al cancelar) -->
-  <div
-    v-show="!confirmando"
-    class="fixed inset-0 z-50 flex items-center justify-center p-4"
-    style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"
-    @click.self="cerrarPorFondo"
-  >
+  <div v-show="!confirmando" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);" @click.self="cerrarPorFondo">
     <div
-      class="flex h-[88vh] max-h-[48rem] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-neutral-50 shadow-2xl"
-    >
+      class="flex h-[88vh] max-h-[48rem] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-neutral-50 shadow-2xl">
       <!-- Encabezado -->
       <div class="flex items-start justify-between gap-4 border-b border-neutral-200 px-6 py-4">
         <div>
@@ -332,13 +331,7 @@ onMounted(() => {
             {{ t.subtitulo }}
           </p>
         </div>
-        <button
-          type="button"
-          class="action-button"
-          title="Cerrar"
-          aria-label="Cerrar"
-          @click="close"
-        >
+        <button type="button" class="action-button" title="Cerrar" aria-label="Cerrar" @click="close">
           <X :size="18" />
         </button>
       </div>
@@ -347,48 +340,25 @@ onMounted(() => {
         <!-- Izquierda: búsqueda + lista -->
         <div class="flex min-h-0 flex-1 flex-col gap-3 md:w-2/5 md:flex-none">
           <form class="flex gap-2" @submit.prevent="buscar">
-            <input
-              v-model="busqueda"
-              type="text"
-              placeholder="Buscar producto"
-              aria-label="Buscar producto"
-              class="min-w-0 flex-1 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-body focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600"
-            />
-            <button
-              type="submit"
+            <input v-model="busqueda" type="text" placeholder="Buscar producto" aria-label="Buscar producto"
+              class="min-w-0 flex-1 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-body focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600" />
+            <button type="submit"
               class="flex items-center justify-center rounded-xl border border-neutral-300 bg-white px-3 text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200"
-              title="Buscar"
-              aria-label="Buscar"
-            >
+              title="Buscar" aria-label="Buscar">
               <Search :size="18" />
             </button>
           </form>
 
-          <div
-            class="min-h-0 flex-1 overflow-y-auto rounded-xl border border-neutral-200 bg-white"
-            @scroll="onScroll"
-          >
-            <button
-              v-for="row in items"
-              :key="row.id"
-              type="button"
+          <div class="min-h-0 flex-1 overflow-y-auto rounded-xl border border-neutral-200 bg-white" @scroll="onScroll">
+            <button v-for="row in items" :key="row.id" type="button"
               class="block w-full border-t border-neutral-200 px-5 py-3 text-left transition-colors first:border-t-0 hover:bg-neutral-100 active:bg-neutral-200 disabled:cursor-default disabled:bg-neutral-100 disabled:opacity-60"
-              :disabled="idsAgregados.has(row.product.id)"
-              @click="agregar(row)"
-            >
+              :disabled="idsAgregados.has(row.product.id)" @click="agregar(row)">
               <div class="flex items-center justify-between gap-2 border-b border-neutral-300 pb-1">
                 <p class="text-body text-primary-800">{{ row.product.description }}</p>
-                <Check
-                  v-if="idsAgregados.has(row.product.id)"
-                  :size="16"
-                  class="shrink-0 text-green-700"
-                  aria-label="Ya agregado"
-                />
+                <Check v-if="idsAgregados.has(row.product.id)" :size="16" class="shrink-0 text-green-700"
+                  aria-label="Ya agregado" />
               </div>
-              <p
-                class="pt-2 text-caption"
-                :class="enAlerta(row) ? 'text-red-700' : 'text-neutral-500'"
-              >
+              <p class="pt-2 text-caption" :class="enAlerta(row) ? 'text-red-700' : 'text-neutral-500'">
                 Stock: {{ convertirStockVista(row.currentStock, row.product.measureUnit) }}
                 / Stock Min: {{ convertirStockVista(row.minimumStock, row.product.measureUnit) }}
               </p>
@@ -400,31 +370,30 @@ onMounted(() => {
 
             <div v-else-if="error" class="px-5 py-6 text-center">
               <p class="text-body text-red-700">{{ error }}</p>
-              <button
-                type="button"
-                class="mt-2 text-label text-primary-600 hover:underline"
-                @click="loadMore"
-              >
+              <button type="button" class="mt-2 text-label text-primary-600 hover:underline" @click="loadMore">
                 Reintentar
               </button>
             </div>
 
-            <p
-              v-else-if="items.length === 0"
-              class="px-5 py-10 text-center text-neutral-500"
-            >
+            <p v-else-if="items.length === 0" class="px-5 py-10 text-center text-neutral-500">
               <template v-if="terminoAplicado">Sin resultados para «{{ terminoAplicado }}».</template>
               <template v-else>No hay productos en el almacén de esta sucursal.</template>
             </p>
+          </div>
+          <div v-if="esEntrada" class="flex items-center gap-3">
+            <label for="folio-movimiento" class="text-label font-bold text-secondary-900">Proveedor:</label>
+            <input id="folio-movimiento" v-model="supplierName" type="text" autocomplete="off"
+              class="w-48 min-w-0 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-body focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600" />
+            <label for="folio-movimiento" class="text-label font-bold text-secondary-900">Folio:</label>
+            <input id="folio-movimiento" v-model="folio" type="text" autocomplete="off"
+              class="w-48 min-w-0 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-body focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600" />
           </div>
         </div>
 
         <!-- Derecha: productos de la entrada -->
         <div class="flex min-h-0 flex-1 flex-col gap-3">
-          <div
-            ref="tablaRef"
-            class="min-h-0 flex-1 scroll-pt-12 overflow-auto rounded-xl border border-neutral-200 bg-white"
-          >
+          <div ref="tablaRef"
+            class="min-h-0 flex-1 scroll-pt-12 overflow-auto rounded-xl border border-neutral-200 bg-white">
             <table class="w-full min-w-[34rem] border-collapse text-left">
               <colgroup>
                 <col />
@@ -434,13 +403,16 @@ onMounted(() => {
 
               <thead>
                 <tr>
-                  <th class="sticky top-0 z-10 border-b border-neutral-200 bg-neutral-100 px-4 py-3 text-center text-label text-secondary-900">
+                  <th
+                    class="sticky top-0 z-10 border-b border-neutral-200 bg-neutral-100 px-4 py-3 text-center text-label text-secondary-900">
                     Información
                   </th>
-                  <th class="sticky top-0 z-10 border-b border-l border-neutral-200 bg-neutral-100 px-4 py-3 text-center text-label text-secondary-900">
+                  <th
+                    class="sticky top-0 z-10 border-b border-l border-neutral-200 bg-neutral-100 px-4 py-3 text-center text-label text-secondary-900">
                     Cantidad
                   </th>
-                  <th v-if="esEntrada" class="sticky top-0 z-10 border-b border-l border-neutral-200 bg-neutral-100 px-4 py-3 text-center text-label text-secondary-900">
+                  <th v-if="esEntrada"
+                    class="sticky top-0 z-10 border-b border-l border-neutral-200 bg-neutral-100 px-4 py-3 text-center text-label text-secondary-900">
                     Costo por K/L/U
                   </th>
                 </tr>
@@ -451,43 +423,30 @@ onMounted(() => {
                   <td class="px-4 py-3">
                     <div class="flex items-center justify-between gap-2 border-b border-neutral-300 pb-1">
                       <p class="text-body text-primary-800">{{ fila.storage.product.description }}</p>
-                      <button
-                        type="button"
+                      <button type="button"
                         class="action-button shrink-0 hover:bg-red-100 hover:text-red-600 active:bg-red-200"
-                        :title="t.quitar"
-                        :aria-label="t.quitar"
-                        @click="quitar(fila.storage.product.id)"
-                      >
+                        :title="t.quitar" :aria-label="t.quitar" @click="quitar(fila.storage.product.id)">
                         <Trash2 :size="16" />
                       </button>
                     </div>
-                    <p
-                      class="pt-2 text-caption"
-                      :class="enAlerta(fila.storage) ? 'text-red-700' : 'text-neutral-500'"
-                    >
+                    <p class="pt-2 text-caption" :class="enAlerta(fila.storage) ? 'text-red-700' : 'text-neutral-500'">
                       Stock: {{ convertirStockVista(fila.storage.currentStock, fila.storage.product.measureUnit) }}
-                      / Stock Min: {{ convertirStockVista(fila.storage.minimumStock, fila.storage.product.measureUnit) }}
+                      / Stock Min: {{ convertirStockVista(fila.storage.minimumStock, fila.storage.product.measureUnit)
+                      }}
                     </p>
                   </td>
 
                   <td class="border-l border-neutral-200 px-4 py-3">
                     <div class="flex items-center gap-2">
-                      <input
-                        type="text"
-                        inputmode="decimal"
-                        autocomplete="off"
-                        :value="fila.cantidad"
+                      <input type="text" inputmode="decimal" autocomplete="off" :value="fila.cantidad"
                         :data-cantidad="fila.storage.product.id"
                         :aria-label="`Cantidad de ${fila.storage.product.description}`"
                         class="min-w-0 max-w-32 flex-1 rounded-lg border bg-white px-3 py-1.5 text-body focus:outline-none focus:ring-2"
-                        :class="
-                          excedeStock(fila)
+                        :class="excedeStock(fila)
                             ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                             : 'border-neutral-300 focus:border-primary-600 focus:ring-primary-600'
-                        "
-                        :title="excedeStock(fila) ? 'Es mayor al stock disponible' : undefined"
-                        @input="onNumero($event, fila, 'cantidad')"
-                      />
+                          " :title="excedeStock(fila) ? 'Es mayor al stock disponible' : undefined"
+                        @input="onNumero($event, fila, 'cantidad')" />
                       <span class="w-6 shrink-0 text-caption text-neutral-500">
                         {{ abreviaturas[fila.storage.product.measureUnit] }}
                       </span>
@@ -496,15 +455,10 @@ onMounted(() => {
 
                   <td v-if="esEntrada" class="border-l border-neutral-200 px-4 py-3">
                     <div class="flex items-center gap-2">
-                      <input
-                        type="text"
-                        inputmode="decimal"
-                        autocomplete="off"
-                        :value="fila.costo"
+                      <input type="text" inputmode="decimal" autocomplete="off" :value="fila.costo"
                         :aria-label="`Costo por ${CONVERSIONES[fila.storage.product.measureUnit].etiqueta} de ${fila.storage.product.description}`"
                         class="min-w-0 max-w-32 flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-body focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600"
-                        @input="onNumero($event, fila, 'costo')"
-                      />
+                        @input="onNumero($event, fila, 'costo')" />
                       <span class="w-6 shrink-0 text-caption text-neutral-500">$</span>
                     </div>
                   </td>
@@ -519,32 +473,25 @@ onMounted(() => {
             </table>
           </div>
 
-          <div class="flex items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-              <label for="folio-movimiento" class="text-label font-bold text-secondary-900">Folio:</label>
-              <input
-                id="folio-movimiento"
-                v-model="folio"
-                type="text"
-                autocomplete="off"
-                class="w-48 min-w-0 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-body focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600"
-              />
-            </div>
+          <div class="flex gap-4" :class="esEntrada ? 'justify-end' : 'justify-between'">
+            <div v-if="!esEntrada" class="flex items-center gap-2">
+              <label for="reason" class="text-label font-bold text-secondary-900">
+                Motivo de salida:
+              </label>
 
+              <select id="reason" v-model="reason"
+                class="rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-2 text-secondary-800">
+                <option value="TRASPASO">Traspaso</option>
+                <option value="MERMA">Merma</option>
+              </select>
+            </div>
             <div class="flex items-center gap-4">
-              <p
-                v-if="seleccionados.length > 0 && !movimientoValido"
-                class="text-right text-caption text-neutral-500"
-              >
+              <p v-if="seleccionados.length > 0 && !movimientoValido" class="text-right text-caption text-neutral-500">
                 {{ t.hint }}
               </p>
-              <button
-                type="button"
+              <button type="button"
                 class="shrink-0 rounded-xl px-5 py-2 text-label text-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
-                :class="t.boton"
-                :disabled="!movimientoValido"
-                @click="confirmando = true"
-              >
+                :class="t.boton" :disabled="!movimientoValido" @click="confirmando = true">
                 {{ t.confirmar }}
               </button>
             </div>
@@ -555,15 +502,10 @@ onMounted(() => {
   </div>
 
   <!-- Paso 2: confirmación -->
-  <div
-    v-if="confirmando"
-    class="fixed inset-0 z-50 flex items-center justify-center p-4"
-    style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"
-  >
-    <div
-      class="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-neutral-50 shadow-2xl"
-      style="max-height: 85vh;"
-    >
+  <div v-if="confirmando" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+    <div class="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-neutral-50 shadow-2xl"
+      style="max-height: 85vh;">
       <div class="border-b border-neutral-200 px-6 py-4">
         <h3 class="text-title text-secondary-900" style="font-size: 1.125rem">{{ t.confirmarTitulo }}</h3>
         <p class="text-caption text-neutral-500">
@@ -575,11 +517,8 @@ onMounted(() => {
       </div>
 
       <ul class="min-h-0 flex-1 divide-y divide-neutral-200 overflow-y-auto px-6">
-        <li
-          v-for="fila in seleccionados"
-          :key="fila.storage.product.id"
-          class="flex items-start justify-between gap-4 py-3"
-        >
+        <li v-for="fila in seleccionados" :key="fila.storage.product.id"
+          class="flex items-start justify-between gap-4 py-3">
           <span class="text-body text-primary-800">{{ fila.storage.product.description }}</span>
           <span class="shrink-0 text-right text-body">
             <span class="font-semibold text-secondary-800">
@@ -593,20 +532,14 @@ onMounted(() => {
       </ul>
 
       <div class="flex justify-end gap-3 border-t border-neutral-200 px-6 py-4">
-        <button
-          type="button"
+        <button type="button"
           class="rounded-xl border border-neutral-300 bg-white px-5 py-2 text-label text-secondary-800 hover:bg-neutral-100 active:bg-neutral-200"
-          @click="confirmando = false"
-        >
+          @click="confirmando = false">
           Cancelar
         </button>
-        <button
-          type="button"
+        <button type="button"
           class="rounded-xl px-5 py-2 text-label text-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
-          :class="t.boton"
-          :disabled="enviando"
-          @click="confirmar"
-        >
+          :class="t.boton" :disabled="enviando" @click="confirmar">
           {{ t.confirmar }}
         </button>
       </div>

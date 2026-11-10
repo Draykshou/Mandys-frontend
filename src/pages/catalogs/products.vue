@@ -59,8 +59,8 @@ const productsColumn: CatalogoDef = {
       type: 'currency',
       format: (value, row) => {
         const unidades: Record<string, string> = {
-          Gramos: '/k',
-          Mililitros: '/l',
+          Kilogramos: '/k',
+          Litros: '/l',
           Unidades: '/u'
         }
 
@@ -174,7 +174,7 @@ const loadRowInformation = (row: CatalogRow) => {
     isSupply: Boolean(row.isSupply),
     costPrice: Number(row.costprice),
     salePrice: Number(row.salePrice),
-    measureUnit: row.measureUnit as "Gramos" | "Mililitros" | "Unidades",
+    measureUnit: row.measureUnit as "Kilogramos" | "Litros" | "Unidades",
   }
 }
 
@@ -265,8 +265,8 @@ type Unidad = Storage['product']['measureUnit']
 
 const COSTO_POR: Record<Unidad, { etiqueta: string; factor: number }> = {
   Unidades: { etiqueta: 'u', factor: 1 },
-  Gramos: { etiqueta: 'kg', factor: 1000 },
-  Mililitros: { etiqueta: 'l', factor: 1000 },
+  Kilogramos: { etiqueta: 'kg', factor: 1 },
+  Litros: { etiqueta: 'l', factor: 1 },
 }
 const convertirCostoVista = (costo: number, unidad: Unidad): number => {
   return costo * COSTO_POR[unidad].factor

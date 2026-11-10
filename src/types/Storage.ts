@@ -15,26 +15,29 @@ export interface StorageUpdate{
 
 export interface StorageIn {
   folio: string
+  supplierName: string
   products: {
     productId: number
     quantity: number
-    costPrice: number
+    costPrice: number | null
   }[]
 }
 
 export interface StorageOut {
+  reason: "TRASPASO" | "MERMA"
   products: {
     productId: number
     quantity: number
   }[]
-  folio: string
 }
 
 export interface StorageHistory {
   id: number
   branchId: number
   type: string
-  folio: string
+  folio: string | null
+  supplierName: string | null
+  reason: string | null
   products: [
     {
       product: Product

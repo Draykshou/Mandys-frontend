@@ -17,8 +17,8 @@ type Unidad = string
 
 const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
   Unidades: { etiqueta: 'u', factor: 1 },
-  Gramos: { etiqueta: 'kg', factor: 1000 },
-  Mililitros: { etiqueta: 'l', factor: 1000 },
+  Kilogramos: { etiqueta: 'kg', factor: 1 },
+  Litros: { etiqueta: 'l', factor: 1 },
 }
 
 const increaseUnit = (stock: number, unidad: Unidad): number => {
@@ -55,7 +55,6 @@ const saveUpdate = () => {
   <div
   class="fixed inset-0 z-50 flex items-center justify-center p-4"
   style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"
-  @click.self="emit('close')"
   >
       <div 
       class="flex flex-col rounded-2xl shadow-2xl w-full max-w-100 bg-neutral-50 overflow-hidden" style="max-height: 92vh;">

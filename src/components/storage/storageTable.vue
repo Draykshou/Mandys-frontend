@@ -61,11 +61,11 @@ type Unidad = Storage['product']['measureUnit']
 
 const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
   Unidades: { etiqueta: 'u', factor: 1 },
-  Gramos: { etiqueta: 'kg', factor: 1000 },
-  Mililitros: { etiqueta: 'l', factor: 1000 },
+  Kilogramos: { etiqueta: 'kg', factor: 1 },
+  Litros: { etiqueta: 'l', factor: 1 },
 }
 const convertirCostoVista = (costo: number, unidad: Unidad): string => {
-  return '$ ' + String(costo * CONVERSIONES[unidad].factor) + ' ' + CONVERSIONES[unidad].etiqueta
+  return '$ ' + String(costo * CONVERSIONES[unidad].factor) + ' / ' + CONVERSIONES[unidad].etiqueta
 }
 
 const convertirStockVista = (stock: number, unidad: Unidad): string => {

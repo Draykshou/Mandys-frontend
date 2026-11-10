@@ -124,8 +124,8 @@ const historyColumns: CatalogColumn[] = [
 type Unidad = Storage['product']['measureUnit']
 const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
   Unidades: { etiqueta: 'u', factor: 1 },
-  Gramos: { etiqueta: 'kg', factor: 1000 },
-  Mililitros: { etiqueta: 'l', factor: 1000 },
+  Kilogramos: { etiqueta: 'kg', factor: 1000 },
+  Litros: { etiqueta: 'l', factor: 1000 },
 }
 
 const conversionPara = (unidad: unknown) => {
@@ -136,10 +136,10 @@ const conversionPara = (unidad: unknown) => {
 
   const unidadNormalizada = clave.toLowerCase()
   if (unidadNormalizada === 'kg' || unidadNormalizada === 'kilos') {
-    return CONVERSIONES.Gramos
+    return CONVERSIONES.Kilogramos
   }
   if (unidadNormalizada === 'l' || unidadNormalizada === 'litros') {
-    return CONVERSIONES.Mililitros
+    return CONVERSIONES.Litros
   }
 
   return { etiqueta: clave || 'u', factor: 1 }
@@ -177,6 +177,7 @@ const loadBranches = async () => {
 };
 
 const loadStorage = async (p = 1) => {
+  //console.log("Estoy cargando solo almacen")
   try {
     const { orderBy, isSupply } = getStorageFilter()
 
@@ -196,6 +197,7 @@ const loadStorage = async (p = 1) => {
 }
 
 const loadStorageHistory = async (p = 1) => {
+  //console.log("Estoy cargando solo historial")
   try {
     if(rolUsuario.value === "Encargado de Almacen"){
       storagesHistory.value = await getOneStorageHistory(p, 20, '', '')
@@ -264,7 +266,14 @@ const exportarHistorial = () => {
 
 watch(selectedBranchId, (newId) => {
   if (newId !== undefined) {
-    loadStorage(1)
+    if(inHistoryTable.value){
+      //console.log("primero")
+      loadStorageHistory(1)
+    }
+    else{
+      //console.log("segundo")
+      loadStorage(1)
+    }
   }
 })
 
@@ -272,8 +281,14 @@ watch(selectedBranchId, (newId) => {
 const inHistoryTable = ref(false)
 
 const abrirHistorial = async () => {
-  await loadStorageHistory()
-  inHistoryTable.value = !inHistoryTable.value
+  if(!inHistoryTable.value){
+    await loadStorageHistory()
+    inHistoryTable.value = !inHistoryTable.value
+  }
+  else{
+    await loadStorage()
+    inHistoryTable.value = !inHistoryTable.value
+  }
 }
 
 // Entradas y salidas
@@ -325,11 +340,10 @@ const closeModals = () => {
   enterOnShortCut.value = false
 }
 
-
 const selectUpdateRow = ref<Storage>()
 
 const updateModalEnabled = (row: Storage) => {
-  console.log('Actualizar stock mínimo para:', row)
+  //console.log('Actualizar stock mínimo para:', row)
   selectUpdateRow.value = row
   storageUpdateModal.value = true
 }
@@ -338,12 +352,12 @@ const UpdateStorage = async (newStockMinimum: number) => {
   if (!selectUpdateRow.value) return;
 
   try {
-    console.log(`Stock mínimo actualizado para el producto ${selectUpdateRow.value.product.id}: ${newStockMinimum}`);
+    //console.log(`Stock mínimo actualizado para el producto ${selectUpdateRow.value.product.id}: ${newStockMinimum}`);
     await putStorage(Number(selectedBranchId.value), selectUpdateRow.value.product.id, { minimumStock: newStockMinimum });
     storageUpdateModal.value = false;
     await loadStorage();
   } catch (error) {
-    console.error('Error al actualizar el stock mínimo:', error);
+    //console.error('Error al actualizar el stock mínimo:', error);
   }
 };
 

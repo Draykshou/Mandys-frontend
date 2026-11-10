@@ -40,6 +40,14 @@ const terminoAplicado = ref('') // lo que realmente se mandó a buscar
 // Sirve para descartar respuestas viejas si el usuario busca otra cosa mientras carga.
 let version = 0
 
+type Unidad = Storage['product']['measureUnit']
+
+const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
+  Unidades: { etiqueta: 'u', factor: 1 },
+  Kilogramos: { etiqueta: 'g', factor: 1000 },
+  Litros: { etiqueta: 'ml', factor: 1000 },
+}
+
 const loadMore = async () => {
   if (loading.value || page.value >= totalPages.value) return
 
@@ -98,7 +106,7 @@ interface FilaReceta {
 
 // Copia de trabajo: si se sale con la X, lo que se editó aquí se descarta.
 const filas = ref<FilaReceta[]>(
-  props.recipe.map((r) => ({ product: r.product, cantidad: String(r.quantity) })),
+  props.recipe.map((r) => ({ product: r.product, cantidad: String(r.quantity * CONVERSIONES[r.product.measureUnit].factor ) })),
 )
 const tablaRef = ref<HTMLElement | null>(null)
 
@@ -158,7 +166,7 @@ const hint = computed(() =>
 const confirmar = () => {
   emit(
     'confirm',
-    filas.value.map((f) => ({ product: f.product, quantity: Number(f.cantidad) })),
+    filas.value.map((f) => ({ product: f.product, quantity: Number(f.cantidad) / CONVERSIONES[f.product.measureUnit].factor })),
   )
 }
 
@@ -231,8 +239,8 @@ onMounted(loadMore)
               />
             </div>
             <p class="pt-2 text-caption text-neutral-500">
-              Unidad: {{ product.measureUnit }}
-              / Costo: {{ formatoMoneda(product.costPrice * 1000) }} por {{ (etiquetaCosto(product.measureUnit)) }}
+              Unidad: {{ CONVERSIONES[product.measureUnit].etiqueta }}
+              / Costo: {{ formatoMoneda(product.costPrice) }} por {{ (etiquetaCosto(product.measureUnit)) }}
             </p>
           </button>
 

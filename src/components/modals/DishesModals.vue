@@ -73,6 +73,13 @@ const changeDeleteModal = () => {
   firstDeleteModel.value = false
 }
 
+type Unidad = Storage['product']['measureUnit']
+const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
+  Unidades: { etiqueta: 'u', factor: 1 },
+  Kilogramos: { etiqueta: 'g', factor: 1000 },
+  Litros: { etiqueta: 'ml', factor: 1000 },
+}
+
 const save=()=>{
     if(price.value===null)return
     const recipeRequest=recipe.value.map(item=>({
@@ -83,6 +90,7 @@ const save=()=>{
         console.log('Insertando platillo:', name.value, price.value, recipeRequest, precioFabricacion.value)
         emit('insert', name.value, price.value, recipeRequest)
     }else{
+        console.log('Actualizando:', name.value, price.value, recipeRequest, precioFabricacion.value)
         emit('update', name.value, price.value, recipeRequest)
     }
 }

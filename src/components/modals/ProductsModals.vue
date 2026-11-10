@@ -129,8 +129,8 @@ const changeDeleteModal = () => {
                 Selecciona una unidad
               </option>
 
-              <option v-if="isSupply" value="Gramos">Gramos</option>
-              <option v-if="isSupply" value="Mililitros">Mililitros</option>
+              <option v-if="isSupply" value="Kilos">gramos</option>
+              <option v-if="isSupply" value="Litros">Mililitros</option>
               <option value ="Unidades">Unidades</option>
             </select>
           </div>

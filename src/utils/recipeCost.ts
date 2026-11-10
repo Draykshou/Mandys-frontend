@@ -5,16 +5,16 @@ type Unidad = Product['measureUnit']
 // Cómo se muestra la cantidad de un insumo (siempre en la unidad base).
 export const ABREVIATURAS: Record<Unidad, string> = {
   Unidades: 'u',
-  Gramos: 'g',
-  Mililitros: 'ml',
+  Kilogramos: 'g',
+  Litros: 'ml',
 }
 
 // El costPrice de un producto es por kilo, por litro o por unidad.
 // `factor` = cuántas unidades base (g, ml, u) trae esa unidad de costo.
 const COSTO_BASE: Record<Unidad, { etiqueta: string; factor: number }> = {
   Unidades: { etiqueta: 'u', factor: 1 },
-  Gramos: { etiqueta: 'kg', factor: 1 },
-  Mililitros: { etiqueta: 'L', factor: 1 },
+  Kilogramos: { etiqueta: 'kg', factor: 1000 },
+  Litros: { etiqueta: 'L', factor: 1000 },
 }
 
 /** Etiqueta de la unidad en la que viene el costo: "kg", "L" o "u". */
