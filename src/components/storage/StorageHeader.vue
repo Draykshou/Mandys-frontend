@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus } from 'lucide-vue-next'
+import { Plus, Clock, Warehouse } from 'lucide-vue-next'
 import type { Branch } from '@/types/BranchesDtos'
 
 const props = withDefaults(
@@ -8,6 +8,7 @@ const props = withDefaults(
     branches: Branch[]
     selectedBranchId: number | undefined
     selectedBranchName?: string
+    inHistoryTable: boolean
   }>(),
   {
     rolUsuario: '',
@@ -29,6 +30,7 @@ const branchWrite = (): string => {
 const emit = defineEmits<{
   storageIn: []
   storageOut: []
+  storageHistory: []
   'update:selectedBranchId': [value: number]
 }>()
 </script>
@@ -65,6 +67,28 @@ const emit = defineEmits<{
     </div>
 
     <div class="flex gap-4">
+      <button
+        v-if="!inHistoryTable" 
+        type="button" 
+        class="flex flex-row gap-1 items-center rounded-xl p-2 
+        btn btn-primary bg-blue-200 text-blue-700 text-xl text-bold shadow-sm
+        hover:bg-blue-300 hover:shadow-md transition-all duration-300
+        active:bg-blue-400 active:shadow-sm" 
+        @click="emit('storageHistory')">
+        <Clock :size="20" class="text-blue-700"/>
+          Ver historial
+      </button>
+      <button 
+        v-else
+        type="button" 
+        class="flex flex-row gap-1 items-center rounded-xl p-2 
+        btn btn-primary bg-blue-200 text-blue-700 text-xl text-bold shadow-sm
+        hover:bg-blue-300 hover:shadow-md transition-all duration-300
+        active:bg-blue-400 active:shadow-sm" 
+        @click="emit('storageHistory')">
+        <Warehouse :size="20" class="text-blue-700"/>
+          Ver Almacen
+      </button>
       <button 
         type="button" 
         class="flex flex-row gap-1 items-center rounded-xl p-2 
@@ -73,9 +97,9 @@ const emit = defineEmits<{
         active:bg-green-400 active:shadow-sm" 
         @click="emit('storageIn')">
         <Plus :size="20" class="text-green-700"/>
-        {{ 'Generar entrada' }}
-        </button>
-        <button 
+          Generar entrada
+      </button>
+      <button 
         type="button" 
         class="flex flex-row gap-1 items-center rounded-xl p-2 
         btn btn-primary bg-red-200 text-red-700 text-xl text-bold shadow-sm
@@ -83,9 +107,8 @@ const emit = defineEmits<{
         active:bg-red-400 active:shadow-sm" 
         @click="emit('storageOut')">
         <Plus :size="20" class="text-red-700"/>
-        {{ 'Generar Salida' }}
-        </button>
+          Generar Salida
+      </button>
     </div>
-    
   </div>
 </template>

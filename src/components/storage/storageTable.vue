@@ -84,7 +84,7 @@ const rangoMostrado = computed(() => {
   <section class="overflow-hidden rounded-(--radius-card) border border-neutral-200 bg-neutral-50 shadow-sm">
     <div class="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
       <div class="flex items-center gap-2">
-        <h3 class="text-title text-secondary-900" style="font-size: 1.125rem">Inventario</h3>
+        <h2 class="text-title text-secondary-900" style="font-size: 1.125rem">Inventario</h2>
         <span class="chip bg-neutral-100 text-secondary-600 rounded-xl" style="padding: 0.125rem 0.625rem">
           {{ totalRegistros }} registros
         </span>
@@ -120,13 +120,13 @@ const rangoMostrado = computed(() => {
             <td class="px-6 py-4 text-left text-primary-800">{{ row.product.description }}</td>
 
             <td
-              class="px-6 py-4 text-center font-semibold"
+              class="px-6 py-4 text-center"
               :class="enAlerta(row) ? 'text-red-700' : 'text-secondary-800'"
             >
               {{ convertirStockVista(row.currentStock, row.product.measureUnit) }}
             </td>
 
-            <td class="px-6 py-4 text-center text-primary-800">{{ convertirCostoVista(row.product.costPrice, row.product.measureUnit) }}</td>
+            <td class="px-6 py-4 text-center text-secondary-800">{{ convertirCostoVista(row.product.costPrice, row.product.measureUnit) }}</td>
 
             <td class="px-6 py-4 text-center text-secondary-800">
                 <div class="flex items-center justify-center gap-4">

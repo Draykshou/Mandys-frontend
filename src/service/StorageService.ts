@@ -1,5 +1,5 @@
 import { api } from '@/lib/api-client'
-import type { Storages, StorageIn, StorageOut, StorageUpdate } from '@/types/Storage'
+import type { Storages, StorageIn, StorageOut, StorageUpdate, StoragesHistory } from '@/types/Storage'
 
 export async function getStorage(
     branchId: number,
@@ -36,6 +36,24 @@ export async function outStorage(branchId: number, payload: StorageOut) {
     return response.data
 }
 
+export async function getStorageHistory(
+    branchId: number,
+    page = 1,
+    pageSize = 20,
+    search = '',
+    orderBy = '',
+){
+    const response = await api.get<StoragesHistory>(`/branches/${branchId}/storage/history`, {
+        params: {
+            page,
+            pageSize,
+            search: search || undefined,
+            orderBy,
+        }
+    })
+    return response.data
+}
+
 
 export async function getOneStorage(
     page = 1,
@@ -68,6 +86,23 @@ export async function inOneStorage(payload: StorageIn) {
 
 export async function outOneStorage(payload: StorageOut) {
     const response = await api.post<StorageOut>(`/storage/out`, payload)
+    return response.data
+}
+
+export async function getOneStorageHistory(
+    page = 1,
+    pageSize = 20,
+    search = '',
+    orderBy = '',
+){
+    const response = await api.get<StoragesHistory>(`/storage/history`, {
+        params: {
+            page,
+            pageSize,
+            search: search || undefined,
+            orderBy,
+        }
+    })
     return response.data
 }
 

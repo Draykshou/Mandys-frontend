@@ -29,6 +29,22 @@ export interface StorageOut {
   }[]
   folio: string
 }
+
+export interface StorageHistory {
+  id: number
+  branchId: number
+  type: string
+  folio: string
+  products: [
+    {
+      product: Product
+      quantity: number
+      costPrice: number
+    }
+  ]
+  date: string
+
+}
  
 export interface Storages {
   totalCount: number
@@ -36,5 +52,13 @@ export interface Storages {
   pageSize: number
   totalPages: number
   items: Storage[]
+}
+
+export interface StoragesHistory {
+  totalCount: number
+  page: number
+  pageSize: number
+  totalPages: number
+  items: StorageHistory[]
 }
 

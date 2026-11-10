@@ -8,9 +8,9 @@ import CatalogFilter from '@/components/CatalogFilter.vue'
 
 // Services y tipos
 import useAuth from '@/composables/useAuth'
-import { getStorage, putStorage, inStorage, outStorage, getOneStorage, inOneStorage, outOneStorage} from '@/service/StorageService'
+import { getStorage, putStorage, inStorage, outStorage, getOneStorage, inOneStorage, outOneStorage, getOneStorageHistory, getStorageHistory} from '@/service/StorageService'
 import { getBranches } from '@/service/BranchesService'
-import type { Storages, Storage, StorageIn, StorageOut } from '@/types/Storage'
+import type { Storages, StoragesHistory, Storage, StorageIn, StorageOut, StorageHistory } from '@/types/Storage'
 import type { Branch } from '@/types/BranchesDtos'
 
 // UI interna
@@ -18,6 +18,7 @@ import StorageHeader from '@/components/storage/StorageHeader.vue'
 import storageTable from '@/components/storage/storageTable.vue'
 import StorageModals from '@/components/storage/StorageModals.vue'
 import StorageUpdateModal from '@/components/storage/StorageUpdateModal.vue'
+import StorageHistoryTable from '@/components/storage/StorageHistoryTable.vue'
 
 // Filtro
 
@@ -91,6 +92,7 @@ const { state: auth} = useAuth()
 const rolUsuario = computed(() => auth.value.user?.role ?? '')
 
 const storages = ref<Storages | null>(null)
+const storagesHistory = ref<StoragesHistory | null>(null)
 const page = ref(1)
 const totalPages = ref(1)
 
@@ -107,12 +109,12 @@ const loadBranches = async () => {
     if (branches.value.length > 0 && (rolUsuario.value === "Encargado de Almacen Central" || rolUsuario.value === "Administrador")) {
       selectedBranchId.value = branches.value[0].id;
       selectedBranchName.value = branches.value[0].name;
-      console.log('Cargar sucursal: ' + selectedBranchId.value)
+      //console.log('Cargar sucursal: ' + selectedBranchId.value)
     }
     else if(branches.value.length > 0 && rolUsuario.value === "Encargado de Almacen"){
       selectedBranchId.value = auth.value.user?.branchId
       selectedBranchName.value = branches.value.find(b => b.id === selectedBranchId.value)?.name ?? '' 
-      console.log('Cargar sucursal con id: ' + selectedBranchId.value + '. Y nombre: ' + selectedBranchName.value)
+      //console.log('Cargar sucursal con id: ' + selectedBranchId.value + '. Y nombre: ' + selectedBranchName.value)
     }
   } catch (error) {
     console.error('Error al cargar sucursales:', error);
@@ -129,10 +131,27 @@ const loadStorage = async (p = 1) => {
     else{
       storages.value = await getStorage(selectedBranchId.value as number, p, 20, filtro.busqueda, orderBy, isSupply)
     }
-    console.log('Cargando inventario para la sucursal:', selectedBranchId.value)
+    //console.log('Cargando inventario para la sucursal:', selectedBranchId.value)
     page.value = storages.value.page
     totalPages.value = storages.value.totalPages
-    console.log('Inventario cargado:', storages.value)
+    //console.log('Inventario cargado:', storages.value)
+  } catch (err) {
+    console.error('No se pudo cargar el inventario:', err)
+  }
+}
+
+const loadStorageHistory = async (p = 1) => {
+  try {
+    if(rolUsuario.value === "Encargado de Almacen"){
+      storagesHistory.value = await getOneStorageHistory(p, 20, '', '')
+    }
+    else{
+      storagesHistory.value = await getStorageHistory(selectedBranchId.value as number, p, 20, '', '')
+    }
+    //console.log('Cargando inventario para la sucursal:', selectedBranchId.value)
+    page.value = storagesHistory.value.page
+    totalPages.value = storagesHistory.value.totalPages
+    //console.log('Inventario cargado:', storages.value)
   } catch (err) {
     console.error('No se pudo cargar el inventario:', err)
   }
@@ -143,6 +162,14 @@ watch(selectedBranchId, (newId) => {
     loadStorage(1)
   }
 })
+
+// Historial
+const inHistoryTable = ref(false)
+
+const abrirHistorial = async () => {
+  await loadStorageHistory()
+  inHistoryTable.value = !inHistoryTable.value
+}
 
 // Entradas y salidas
 
@@ -236,8 +263,10 @@ onMounted( async () => {
           :branches="branches"
           v-model:selectedBranchId="selectedBranchId"
           :selected-branch-name="selectedBranchName"
+          :in-history-table="inHistoryTable"
           @storage-in="storageInModal = true"
           @storage-out="storageOutModal = true"
+          @storage-history="abrirHistorial"
         /> 
 
         <CatalogFilter
@@ -281,6 +310,7 @@ onMounted( async () => {
 
 
         <storageTable
+          v-if="!inHistoryTable"
           :rows="storages?.items ?? []"
           :total-registros="storages?.totalCount ?? 0"
           :pagina="page"
@@ -290,6 +320,15 @@ onMounted( async () => {
           @entrada="abrirEntrada"
           @salida="abrirSalida"
         />
+        <StorageHistoryTable
+          v-else
+          :rows="storagesHistory?.items ?? []"
+          :total-registros="storages?.totalCount ?? 0"
+          :pagina="page"
+          :total-paginas="totalPages"
+        />
+
+
       </div>
     </div>
   </div>
