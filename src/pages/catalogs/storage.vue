@@ -8,10 +8,12 @@ import CatalogFilter from '@/components/CatalogFilter.vue'
 
 // Services y tipos
 import useAuth from '@/composables/useAuth'
+import { useExportCatalog } from '@/composables/useExportCatalog'
 import { getStorage, putStorage, inStorage, outStorage, getOneStorage, inOneStorage, outOneStorage, getOneStorageHistory, getStorageHistory} from '@/service/StorageService'
 import { getBranches } from '@/service/BranchesService'
-import type { Storages, StoragesHistory, Storage, StorageIn, StorageOut, StorageHistory } from '@/types/Storage'
+import type { Storages, StoragesHistory, Storage, StorageIn, StorageOut } from '@/types/Storage'
 import type { Branch } from '@/types/BranchesDtos'
+import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
 
 // UI interna
 import StorageHeader from '@/components/storage/StorageHeader.vue'
@@ -100,6 +102,59 @@ const branches = ref<Branch[]>([]);
 const selectedBranchId = ref<number>();
 const selectedBranchName = ref<string>('');
 
+const storageColumns: CatalogColumn[] = [
+  { key: 'product', label: 'Producto', type: 'text' },
+  { key: 'unidad', label: 'Unidad', type: 'text' },
+  { key: 'stockActual', label: 'Stock actual', type: 'text' },
+  { key: 'stockMinimo', label: 'Stock mínimo', type: 'text' },
+  { key: 'costo', label: 'Costo', type: 'currency' },
+  { key: 'ultimaActualizacion', label: 'Última actualización', type: 'text' },
+  { key: 'esInsumo', label: 'Es insumo', type: 'boolean' },
+]
+
+const historyColumns: CatalogColumn[] = [
+  { key: 'tipoMovimiento', label: 'Tipo de movimiento', type: 'text' },
+  { key: 'folio', label: 'Folio', type: 'text' },
+  { key: 'producto', label: 'Producto', type: 'text' },
+  { key: 'cantidad', label: 'Cantidad', type: 'text' },
+  { key: 'costo', label: 'Costo', type: 'currency' },
+  { key: 'fecha', label: 'Fecha', type: 'text' },
+]
+
+type Unidad = Storage['product']['measureUnit']
+const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
+  Unidades: { etiqueta: 'u', factor: 1 },
+  Gramos: { etiqueta: 'kg', factor: 1000 },
+  Mililitros: { etiqueta: 'l', factor: 1000 },
+}
+
+const conversionPara = (unidad: unknown) => {
+  const clave = typeof unidad === 'string' ? unidad.trim() : ''
+  if (clave in CONVERSIONES) {
+    return CONVERSIONES[clave as Unidad]
+  }
+
+  const unidadNormalizada = clave.toLowerCase()
+  if (unidadNormalizada === 'kg' || unidadNormalizada === 'kilos') {
+    return CONVERSIONES.Gramos
+  }
+  if (unidadNormalizada === 'l' || unidadNormalizada === 'litros') {
+    return CONVERSIONES.Mililitros
+  }
+
+  return { etiqueta: clave || 'u', factor: 1 }
+}
+
+const stockParaReporte = (valor: number, unidad: unknown) => {
+  const conversion = conversionPara(unidad)
+  return `${valor / conversion.factor} ${conversion.etiqueta}`
+}
+
+const costoParaReporte = (valor: number, unidad: unknown) =>
+  valor * conversionPara(unidad).factor
+
+const { exportar } = useExportCatalog()
+
 const loadBranches = async () => {
   try {
     const { items } = await getBranches(1, 40, '', 'id');
@@ -155,6 +210,56 @@ const loadStorageHistory = async (p = 1) => {
   } catch (err) {
     console.error('No se pudo cargar el inventario:', err)
   }
+}
+
+const exportarInventario = () => {
+  const filas: CatalogRow[] = (storages.value?.items ?? []).map((row) => ({
+    id: row.id,
+    product: row.product.description,
+    unidad: conversionPara(row.product.measureUnit).etiqueta,
+    stockActual: stockParaReporte(row.currentStock, row.product.measureUnit),
+    stockMinimo: stockParaReporte(row.minimumStock, row.product.measureUnit),
+    costo: costoParaReporte(row.product.costPrice, row.product.measureUnit),
+    ultimaActualizacion: row.lastUpdated
+      ? new Intl.DateTimeFormat('es-MX').format(new Date(row.lastUpdated))
+      : '—',
+    esInsumo: row.product.isSupply,
+  }))
+  void exportar(
+    'excel',
+    {
+      columns: storageColumns,
+      titulo: selectedBranchName.value ? `Inventario - ${selectedBranchName.value}` : 'Inventario',
+    },
+    async () => filas,
+  )
+}
+
+const exportarHistorial = () => {
+  const filas: CatalogRow[] = (storagesHistory.value?.items ?? []).flatMap((movimiento) =>
+    movimiento.products.map((detalle, index) => ({
+      id: `${movimiento.id}-${index}`,
+      tipoMovimiento: movimiento.type === 'in' ? 'Entrada' : 'Salida',
+      folio: movimiento.folio,
+      producto: detalle.product.description,
+      cantidad: stockParaReporte(detalle.quantity, detalle.product.measureUnit),
+      costo: costoParaReporte(detalle.costPrice, detalle.product.measureUnit),
+      fecha: movimiento.date
+        ? new Intl.DateTimeFormat('es-MX').format(new Date(movimiento.date))
+        : '—',
+    })),
+  )
+
+  void exportar(
+    'excel',
+    {
+      columns: historyColumns,
+      titulo: selectedBranchName.value
+        ? `Historial de almacén - ${selectedBranchName.value}`
+        : 'Historial de almacén',
+    },
+    async () => filas,
+  )
 }
 
 watch(selectedBranchId, (newId) => {
@@ -319,6 +424,7 @@ onMounted( async () => {
           @editar="updateModalEnabled"
           @entrada="abrirEntrada"
           @salida="abrirSalida"
+          @exportar="exportarInventario"
         />
         <StorageHistoryTable
           v-else
@@ -326,6 +432,7 @@ onMounted( async () => {
           :total-registros="storages?.totalCount ?? 0"
           :pagina="page"
           :total-paginas="totalPages"
+          @exportar="exportarHistorial"
         />
 
 
