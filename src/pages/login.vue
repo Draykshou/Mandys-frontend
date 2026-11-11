@@ -45,9 +45,7 @@ const handleLogin = async () => {
 
     const redirect = route.query.redirect
     const destino =
-      typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
-        ? redirect
-        : '/catalogs/home'
+      typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/catalogs/home'
     await router.push(destino)
   } catch (err) {
     console.error('Error al iniciar sesión:', err)

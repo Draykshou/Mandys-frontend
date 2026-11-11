@@ -5,11 +5,13 @@ import { ref, onMounted, computed, watch, reactive} from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import appSidebar from '@/components/AppSidebar.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
+import AppToast from '@/components/AppToast.vue'
+import { useToast } from '@/composables/useToast'
 
 // Services y tipos
 import useAuth from '@/composables/useAuth'
 import { useExportCatalog } from '@/composables/useExportCatalog'
-import { getStorage, putStorage, inStorage, outStorage, getOneStorage, inOneStorage, outOneStorage, getOneStorageHistory, getStorageHistory} from '@/service/StorageService'
+import { getStorage, putStorage, inStorage, putOneStorage, outStorage, getOneStorage, inOneStorage, outOneStorage, getOneStorageHistory, getStorageHistory} from '@/service/StorageService'
 import { getBranches } from '@/service/BranchesService'
 import type { Storages, StoragesHistory, Storage, StorageIn, StorageOut } from '@/types/Storage'
 import type { Branch } from '@/types/BranchesDtos'
@@ -21,9 +23,13 @@ import storageTable from '@/components/storage/storageTable.vue'
 import StorageModals from '@/components/storage/StorageModals.vue'
 import StorageUpdateModal from '@/components/storage/StorageUpdateModal.vue'
 import StorageHistoryTable from '@/components/storage/StorageHistoryTable.vue'
+import axios from 'axios'
+
+// toast
+const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
+
 
 // Filtro
-
 const categoriasFiltro = ['Todos', 'Alfabetico A-Z', 'Alfabetico Z-A', 'Cantidad de Stock (ascendente)', 'Cantidad de Stock (descendente)', 'Mayor costo', 'Menor costo', 'Es Insumo', 'No es Insumo', 'Mas reciente', 'Mas antiguo']
 
 const filtro = reactive({
@@ -187,10 +193,10 @@ const loadStorage = async (p = 1) => {
     else{
       storages.value = await getStorage(selectedBranchId.value as number, p, 20, filtro.busqueda, orderBy, isSupply)
     }
-    //console.log('Cargando inventario para la sucursal:', selectedBranchId.value)
+    console.log('Cargando inventario para la sucursal:', selectedBranchId.value)
     page.value = storages.value.page
     totalPages.value = storages.value.totalPages
-    //console.log('Inventario cargado:', storages.value)
+    console.log('Inventario cargado:', storages.value)
   } catch (err) {
     console.error('No se pudo cargar el inventario:', err)
   }
@@ -200,15 +206,15 @@ const loadStorageHistory = async (p = 1) => {
   //console.log("Estoy cargando solo historial")
   try {
     if(rolUsuario.value === "Encargado de Almacen"){
-      storagesHistory.value = await getOneStorageHistory(p, 20, '', '')
+      storagesHistory.value = await getOneStorageHistory(p, 20, '', '-date')
     }
     else{
-      storagesHistory.value = await getStorageHistory(selectedBranchId.value as number, p, 20, '', '')
+      storagesHistory.value = await getStorageHistory(selectedBranchId.value as number, p, 20, '', '-date')
     }
-    //console.log('Cargando inventario para la sucursal:', selectedBranchId.value)
+    console.log('Cargando inventario para la sucursal:', selectedBranchId.value)
     page.value = storagesHistory.value.page
     totalPages.value = storagesHistory.value.totalPages
-    //console.log('Inventario cargado:', storages.value)
+    console.log('Inventario cargado:', storagesHistory.value)
   } catch (err) {
     console.error('No se pudo cargar el inventario:', err)
   }
@@ -301,13 +307,19 @@ const enterOnShortCut = ref(false)
 
 const registrarEntrada = async (entrada: StorageIn) => {
   console.log(entrada)
-  if(rolUsuario.value === "Encargado de Almacen"){
-    await inOneStorage(entrada)
+  try{
+    if(rolUsuario.value === "Encargado de Almacen"){
+      await inOneStorage(entrada)
+    }
+    else{
+      await inStorage(Number(selectedBranchId.value), entrada)
+    }
+    storageInModal.value = false
+    mostrarToast('Entrada realizada correctamente','entrada')
   }
-  else{
-    await inStorage(Number(selectedBranchId.value), entrada)
+  catch(err){
+    mostrarToast(obtenerMensajeError(err,'No se pudo realizar la entrada.'),'error')
   }
-  storageInModal.value = false
   await loadStorage()
 }
 
@@ -318,13 +330,20 @@ const abrirEntrada = (row?: Storage) => {
 }
 
 const registrarSalida = async (salida: StorageOut) => {
-  if(rolUsuario.value === "Encargado de Almacen"){
-    await outOneStorage(salida)
+  console.log(salida)
+  try{
+    if(rolUsuario.value === "Encargado de Almacen"){
+      await outOneStorage(salida)
+    }
+    else{
+      await outStorage(Number(selectedBranchId.value), salida)
+    }
+    mostrarToast('Salida realizada correctamente','salida')
+    storageOutModal.value = false
   }
-  else{
-    await outStorage(Number(selectedBranchId.value), salida)
+  catch(err){
+    mostrarToast(obtenerMensajeError(err,'No se pudo realizar la salida.'),'error')
   }
-  storageOutModal.value = false
   await loadStorage()
 }
 
@@ -352,14 +371,30 @@ const UpdateStorage = async (newStockMinimum: number) => {
   if (!selectUpdateRow.value) return;
 
   try {
-    //console.log(`Stock mínimo actualizado para el producto ${selectUpdateRow.value.product.id}: ${newStockMinimum}`);
-    await putStorage(Number(selectedBranchId.value), selectUpdateRow.value.product.id, { minimumStock: newStockMinimum });
-    storageUpdateModal.value = false;
+    if(rolUsuario.value === "Encargado de Almacen"){
+      await putOneStorage(selectUpdateRow.value.product.id, { minimumStock: newStockMinimum })
+    }
+    else{
+      await putStorage(Number(selectedBranchId.value), selectUpdateRow.value.product.id, { minimumStock: newStockMinimum }); 
+    }
     await loadStorage();
-  } catch (error) {
-    //console.error('Error al actualizar el stock mínimo:', error);
+    mostrarToast('Stock Minimo actualizado correctamente','actualizar')
+    storageUpdateModal.value = false;
+  } catch (err) {
+      console.error("No se pudo crear el producto:", err)
+      mostrarToast(obtenerMensajeError(err,'No se pudo eliminar el Producto.'),'error')
   }
 };
+
+const obtenerMensajeError=(err:unknown,mensajeDefault:string)=>{
+    if(axios.isAxiosError(err)){
+        const mensaje=err.response?.data?.message
+        if(typeof mensaje==='string'&&mensaje.trim()!==''){
+            return mensaje
+        }
+    }
+    return mensajeDefault
+}
 
 onMounted( async () => {
   await loadBranches()
@@ -389,6 +424,7 @@ onMounted( async () => {
         /> 
 
         <CatalogFilter
+          v-if="!inHistoryTable"
           v-model:busqueda="filtro.busqueda"
           v-model:categoria="filtro.categoria"
           :categorias="categoriasFiltro"
@@ -443,13 +479,19 @@ onMounted( async () => {
         <StorageHistoryTable
           v-else
           :rows="storagesHistory?.items ?? []"
-          :total-registros="storages?.totalCount ?? 0"
+          :total-registros="storagesHistory?.totalCount ?? 0"
           :pagina="page"
           :total-paginas="totalPages"
           @exportar="exportarHistorial"
         />
 
-
+        <AppToast
+          :visible="toast.visible"
+          :mensaje="toast.mensaje"
+          :tipo="toast.tipo"
+          :duracion="toast.duracion"
+          @cerrar="cerrarToast"
+        />
       </div>
     </div>
   </div>

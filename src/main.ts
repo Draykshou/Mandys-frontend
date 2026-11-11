@@ -30,7 +30,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.roles && !to.meta.roles.includes(user.role)) {
-    return { path: "/catalogs/home" }; // crea una página simple de "sin permiso"
+    return { path: "/catalogs/home" }; 
   }
 
   return true;

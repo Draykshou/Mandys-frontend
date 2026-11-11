@@ -248,18 +248,32 @@ const excedeStock = (f: FilaEntrada) =>
   !esEntrada.value && Number(f.cantidad) > f.storage.currentStock
 
 // Cantidad mayor a 0 y, según el modo: costo capturado (entrada) o dentro del stock (salida).
-const filaValida = (f: FilaEntrada) =>
-  Number(f.cantidad) > 0 &&
-  !excedeStock(f) &&
-  (!esEntrada.value || (f.costo !== '' && !Number.isNaN(Number(f.costo))))
+const filaValida = (f: FilaEntrada) => {
+  if(props.rolUsuario === "Encargado de Almacen"){
+    //console.log("Entro al if correcto")
+    return Number(f.cantidad) > 0 && !excedeStock(f) && (!esEntrada.value || (String(f.storage.product.costPrice) !== '' && !Number.isNaN(f.storage.product.costPrice)))
+  }
+  else{
+    //console.log("Entro al if malo")
+    return Number(f.cantidad) > 0 && !excedeStock(f) && (!esEntrada.value || (f.costo !== '' && !Number.isNaN(Number(f.costo))))
+  }
+}
 
 // Folio capturado + al menos un producto + todas las filas válidas.
-const movimientoValido = computed(
-  () =>
-    folio.value.trim() !== '' &&
+const movimientoValido = computed(() => {
+  if (esEntrada.value) {
+    return (
+      folio.value.trim() !== '' &&
+      supplierName.value.trim() !== '' &&
+      seleccionados.value.length > 0 &&
+      seleccionados.value.every(filaValida)
+    )
+  }
+  return (
     seleccionados.value.length > 0 &&
-    seleccionados.value.every(filaValida),
-)
+    seleccionados.value.every(filaValida)
+  )
+})
 
 /* ---------------------------------------------------------------------------
  * Confirmación en dos pasos
@@ -274,7 +288,7 @@ const construirEntrada = (): StorageIn => ({
     productId: f.storage.product.id,
     quantity: Number(f.cantidad) * CONVERSIONES[f.storage.product.measureUnit].factor,
     // El costo se captura en la unidad de CONVERSIONES; al back va siempre por unidad base.
-    costPrice: Number(f.costo) / CONVERSIONES[f.storage.product.measureUnit].factor,
+    costPrice: (props.rolUsuario === "Encargado de Almacen" ? f.storage.product.costPrice : Number(f.costo)) / CONVERSIONES[f.storage.product.measureUnit].factor,
   })),
 })
 
@@ -287,9 +301,19 @@ const construirSalida = (): StorageOut => ({
 })
 
 const confirmar = () => {
-  if (props.enviando) return
-  if (esEntrada.value) emit('storageIn', construirEntrada())
-  else emit('storageOut', construirSalida())
+  if (props.enviando) 
+    return
+  if (esEntrada.value){
+    console.log(
+      seleccionados.value.map((f) => ({
+      costPrice: (props.rolUsuario === "Encargado de Almacen" ? f.storage.product.costPrice : Number(f.costo)) / CONVERSIONES[f.storage.product.measureUnit].factor,
+    }))
+    )
+    emit('storageIn', construirEntrada())
+  }
+  else{
+    emit('storageOut', construirSalida())
+  } 
 }
 
 // Clic en el fondo: solo cierra si todavía no se capturó nada.
@@ -455,9 +479,15 @@ onMounted(() => {
 
                   <td v-if="esEntrada" class="border-l border-neutral-200 px-4 py-3">
                     <div class="flex items-center gap-2">
-                      <input type="text" inputmode="decimal" autocomplete="off" :value="fila.costo"
+                      <input type="text" 
+                        inputmode="decimal" 
+                        autocomplete="off"
+                        :disabled="props.rolUsuario === 'Encargado de Almacen'"
+                        :value="props.rolUsuario === 'Encargado de Almacen' ? String(fila.storage.product.costPrice) : fila.costo"
                         :aria-label="`Costo por ${CONVERSIONES[fila.storage.product.measureUnit].etiqueta} de ${fila.storage.product.description}`"
-                        class="min-w-0 max-w-32 flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-body focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600"
+                        class="min-w-0 max-w-32 flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-body
+                         focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600
+                         disabled:bg-neutral-100"
                         @input="onNumero($event, fila, 'costo')" />
                       <span class="w-6 shrink-0 text-caption text-neutral-500">$</span>
                     </div>
@@ -481,6 +511,7 @@ onMounted(() => {
 
               <select id="reason" v-model="reason"
                 class="rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-2 text-secondary-800">
+                <option value="VENTA">Venta</option>
                 <option value="TRASPASO">Traspaso</option>
                 <option value="MERMA">Merma</option>
               </select>
@@ -525,7 +556,7 @@ onMounted(() => {
               {{ fila.cantidad }} {{ abreviaturas[fila.storage.product.measureUnit] }}
             </span>
             <span v-if="esEntrada" class="block text-caption text-neutral-500">
-              a ${{ fila.costo }} por {{ CONVERSIONES[fila.storage.product.measureUnit].etiqueta }}
+              a ${{ props.rolUsuario === "Encargado de Almacen" ? fila.storage.product.costPrice : fila.costo }} por {{ CONVERSIONES[fila.storage.product.measureUnit].etiqueta }}
             </span>
           </span>
         </li>
