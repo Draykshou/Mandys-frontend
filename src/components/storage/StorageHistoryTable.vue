@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { StorageHistory } from '@/types/Storage'
-import { Sheet, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Pencil } from 'lucide-vue-next'
+import { Sheet, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { animate } from 'animejs'
 
 const onBeforeEnter = (el: Element) => {
@@ -71,7 +71,6 @@ function formatFecha(valor: string | null) {
 
 const selectedRow = ref<StorageHistory>()
 const modalProductos = ref(false)
-const modalDetalles = ref(false)
 
 const esVenta = computed(() =>
   selectedRow.value?.type === 'out' &&
@@ -109,13 +108,6 @@ const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
     Unidades: { etiqueta: 'u', factor: 1 },
     Kilogramos: { etiqueta: 'kg', factor: 1000 },
     Litros: { etiqueta: 'l', factor: 1000 },
-}
-const convertirCostoVista = (costo: number, unidad: Unidad): string => {
-    return '$ ' + String(costo * CONVERSIONES[unidad].factor) + ' ' + CONVERSIONES[unidad].etiqueta
-}
-
-const convertirStockVista = (stock: number, unidad: Unidad): string => {
-    return String(stock / CONVERSIONES[unidad].factor) + ' ' + CONVERSIONES[unidad].etiqueta
 }
 
 const rangoMostrado = computed(() => {
