@@ -112,6 +112,7 @@ const totalPages = ref(1)
 const branches = ref<Branch[]>([]);
 const selectedBranchId = ref<number>();
 const selectedBranchName = ref<string>('');
+const selectedBranchType = ref<boolean>();
 
 const storageColumns: CatalogColumn[] = [
   { key: 'product', label: 'Producto', type: 'text' },
@@ -173,13 +174,15 @@ const loadBranches = async () => {
 
     // Seleccionar la primera sucursal por defecto
     if (branches.value.length > 0 && (rolUsuario.value === "Administrador" || rolUsuario.value === "Gerente de Operaciones")) {
-      selectedBranchId.value = branches.value[0].id;
-      selectedBranchName.value = branches.value[0].name;
+      selectedBranchId.value = branches.value[0].id
+      selectedBranchName.value = branches.value[0].name
+      selectedBranchType.value = branches.value[0].warehouseOnly
       //console.log('Cargar sucursal: ' + selectedBranchId.value)
     }
     else if(branches.value.length > 0){
       selectedBranchId.value = auth.value.user?.branchId
       selectedBranchName.value = branches.value.find(b => b.id === selectedBranchId.value)?.name ?? '' 
+      selectedBranchType.value = branches.value.find(b => b.id === selectedBranchId.value)?.warehouseOnly
       //console.log('Cargar sucursal con id: ' + selectedBranchId.value + '. Y nombre: ' + selectedBranchName.value)
     }
   } catch (error) {
@@ -224,6 +227,19 @@ const loadStorageHistory = async (p = 1) => {
     console.error('No se pudo cargar el inventario:', err)
   }
 }
+
+watch(selectedBranchId, (newId) => {
+  if (newId !== undefined) {
+    if(inHistoryTable.value){
+      //console.log("primero")
+      loadStorageHistory(1)
+    }
+    else{
+      //console.log("segundo")
+      loadStorage(1)
+    }
+  }
+})
 
 const exportarInventario = () => {
   const filas: CatalogRow[] = (storages.value?.items ?? []).map((row) => ({
@@ -274,19 +290,6 @@ const exportarHistorial = () => {
     async () => filas,
   )
 }
-
-watch(selectedBranchId, (newId) => {
-  if (newId !== undefined) {
-    if(inHistoryTable.value){
-      //console.log("primero")
-      loadStorageHistory(1)
-    }
-    else{
-      //console.log("segundo")
-      loadStorage(1)
-    }
-  }
-})
 
 // Historial
 const inHistoryTable = ref(false)
@@ -441,7 +444,8 @@ onMounted( async () => {
           v-if="storageInModal"
           modo="entrada"
           :rol-usuario="rolUsuario"
-          :branch-id="Number(selectedBranchId)"
+          :branch-id="selectedBranchId ?? 1"
+          :branch-type="selectedBranchType ?? false"
           :producto-inicial="productoInicial"
           :is-short-cut="enterOnShortCut"
           @close="closeModals"
@@ -452,7 +456,8 @@ onMounted( async () => {
           v-if="storageOutModal"
           modo="salida"
           :rol-usuario="rolUsuario"
-          :branch-id="Number(selectedBranchId)"
+          :branch-id="selectedBranchId ?? 1"
+          :branch-type="selectedBranchType ?? false"
           :producto-inicial="productoInicial"
           :is-short-cut="enterOnShortCut"
           @close="closeModals"

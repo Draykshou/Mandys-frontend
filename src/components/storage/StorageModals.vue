@@ -7,6 +7,7 @@ import type { Storage, StorageIn, StorageOut } from '@/types/Storage'
 const props = withDefaults(
   defineProps<{
     branchId: number
+    branchType: boolean
     /** 'entrada' (por defecto) o 'salida'. El resto del modal es igual. */
     modo?: 'entrada' | 'salida'
     /** Opcional: producto que ya aparece en la lista al abrir (atajo desde la tabla). */
@@ -232,7 +233,7 @@ const onNumero = (e: Event, fila: FilaEntrada, campo: 'cantidad' | 'costo') => {
 }
 
 const folio = ref('')
-const supplierName = ref('')
+const supplierName = ref(props.branchType ? '' : 'Central')
 type StorageOutReason = 'TRASPASO' | 'MERMA'
 const reason = ref<StorageOutReason>('TRASPASO')
 
@@ -399,7 +400,7 @@ onMounted(() => {
           </div>
           <div v-if="esEntrada" class="flex items-center gap-3">
             <label for="folio-movimiento" class="text-label font-bold text-secondary-900">Proveedor:</label>
-            <input id="folio-movimiento" v-model="supplierName" type="text" autocomplete="off"
+            <input :disabled="!branchType" id="folio-movimiento" v-model="supplierName" type="text" autocomplete="off"
               class="w-48 min-w-0 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-body focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600" />
             <label for="folio-movimiento" class="text-label font-bold text-secondary-900">Folio:</label>
             <input id="folio-movimiento" v-model="folio" type="text" autocomplete="off"

@@ -82,10 +82,6 @@ const productosModal = computed(() => selectedRow.value?.products ?? [])
 const totalCosto = computed(() =>
   productosModal.value.reduce((acc, p) => acc + p.quantity * p.costPrice, 0)
 )
-const totalVenta = computed(() =>
-  productosModal.value.reduce((acc, p) => acc + p.quantity * p.product.salePrice, 0)
-)
-const totalMovimiento = computed(() => totalVenta.value - totalCosto.value)
 
 const formatoMoneda = (n: number) => {
     if(n === null){
@@ -144,10 +140,6 @@ const rangoMostrado = computed(() => {
                         <th class="px-3 py-2 text-right">Cantidad</th>
                         <th class="px-3 py-2 text-right">Costo</th>
                         <th class="px-3 py-2 text-right">Subtotal costo</th>
-                        <template v-if="esVenta">
-                            <th class="px-3 py-2 text-right">Precio de venta</th>
-                            <th class="px-3 py-2 text-right">Subtotal venta</th>
-                        </template>
                         </tr>
                     </thead>
                     <tbody>
@@ -160,10 +152,6 @@ const rangoMostrado = computed(() => {
                         <td class="px-3 py-2 text-right">{{ row.quantity + ' ' + CONVERSIONES[row.product.measureUnit].etiqueta }}</td>
                         <td class="px-3 py-2 text-right">{{ formatoMoneda(row.costPrice) +  ' por ' + CONVERSIONES[row.product.measureUnit].etiqueta }}</td>
                         <td class="px-3 py-2 text-right">{{ formatoMoneda(row.quantity * row.costPrice) }}</td>
-                        <template v-if="esVenta">
-                            <td class="px-3 py-2 text-right">{{ formatoMoneda(row.product.salePrice) }}</td>
-                            <td class="px-3 py-2 text-right">{{ formatoMoneda(row.quantity * row.product.salePrice) }}</td>
-                        </template>
                         </tr>
                     </tbody>
                     </table>
@@ -175,15 +163,6 @@ const rangoMostrado = computed(() => {
                     <span class="font-semibold">{{ esVenta ? 'Total costo:' : 'Costo total de la entrada:' }}</span>
                     {{ formatoMoneda(totalCosto) }}
                     </p>
-                    <template v-if="esVenta">
-                    <p><span class="font-semibold">Total venta:</span> {{ formatoMoneda(totalVenta) }}</p>
-                    <p
-                        class="text-lg font-bold"
-                        :class="totalMovimiento >= 0 ? 'text-green-600' : 'text-red-600'"
-                    >
-                        Total del movimiento: {{ formatoMoneda(totalMovimiento) }}
-                    </p>
-                    </template>
                 </div>
             </div>
 
