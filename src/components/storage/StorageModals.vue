@@ -90,13 +90,6 @@ const convertirStockVista = (stock: number, unidad: Unidad): string => {
   return String(stock / CONVERSIONES[unidad].factor) + ' ' + CONVERSIONES[unidad].etiqueta
 }
 
-const encabezadoCosto = Object.values(CONVERSIONES)
-  .map((c) => c.etiqueta)
-  .join('/')
-
-const formatCantidad = (cantidad: number, unidad: Unidad) =>
-  `${cantidad} ${abreviaturas[unidad]}`
-
 // Misma regla que storageTable: stock igual o menor al mínimo.
 const enAlerta = (row: Storage) => row.currentStock <= row.minimumStock
 

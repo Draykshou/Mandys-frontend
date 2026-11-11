@@ -7,7 +7,6 @@ import {
   House,
   LogOut,
   ShoppingBasket,
-  ShoppingCart,
   Store,
   Users,
   Warehouse,
