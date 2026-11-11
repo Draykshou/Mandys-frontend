@@ -77,11 +77,7 @@ export default function useAuth() {
     // refresh token comes from the cookie + XSRF double-submit header
     // that axios sends automatically.
     try {
-      await api.post("/logout");
-    } catch {
-      // Server logout failed; local state is cleared anyway below.
-      // (401 here goes through POST /refresh first via the interceptor,
-      // so an expired access_token still logs out when possible.)
+      await api.post("/logout", { });
     } finally {
       authState.value = {
         user: null,

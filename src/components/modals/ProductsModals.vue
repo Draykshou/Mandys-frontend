@@ -45,11 +45,7 @@ const validate = computed(() => {
   return (
     description.value.trim() !== '' &&
     measureUnit.value !== '' &&
-    (isSupply.value || (
-      salePrice.value !== null &&
-      salePrice.value !== undefined &&
-      salePrice.value >= 0
-    ))
+    (isSupply.value || (salePrice.value !== null && salePrice.value !== undefined && salePrice.value > 0))
   )
 })
 
@@ -129,7 +125,7 @@ const changeDeleteModal = () => {
                 Selecciona una unidad
               </option>
 
-              <option v-if="isSupply" value="Kilos">gramos</option>
+              <option v-if="isSupply" value="Kilogramos">Gramos</option>
               <option v-if="isSupply" value="Litros">Mililitros</option>
               <option value ="Unidades">Unidades</option>
             </select>

@@ -10,7 +10,6 @@ const router = useRouter()
 const { login: authenticate } = useAuth()
 const email = ref('')
 const password = ref('')
-const remember = ref(false)
 const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
@@ -22,7 +21,9 @@ const handleLogin = async () => {
 
   try {
     await authenticate({ email: email.value, password: password.value })
-    await router.push('/menu')
+    const { state: auth} = useAuth()
+    const rolUsuario = auth.value.user?.role
+    await router.push(rolUsuario === "Cliente" ? '/' : '/catalogs/home')
   } catch (requestError) {
     console.error('Error al iniciar sesión del cliente:', requestError)
     error.value = 'Las credenciales son incorrectas o no fue posible iniciar sesión.'
@@ -60,7 +61,6 @@ const handleLogin = async () => {
         <div class="space-y-2">
           <div class="flex items-center justify-between gap-3">
             <label for="client-password" class="text-sm font-semibold text-secondary-800">Contraseña</label>
-            <a href="#" class="text-xs font-semibold text-primary-600 hover:text-primary-700">¿Olvidaste tu contraseña?</a>
           </div>
           <div class="relative">
             <Key :size="19" class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400" />
@@ -71,11 +71,6 @@ const handleLogin = async () => {
             </button>
           </div>
         </div>
-
-        <label class="flex cursor-pointer items-center gap-3 text-sm text-secondary-600">
-          <input v-model="remember" type="checkbox" class="h-4 w-4 rounded border-neutral-300 accent-primary-600" />
-          <span>Recordarme</span>
-        </label>
 
         <button type="submit" :disabled="loading" class="w-full rounded-xl bg-primary-600 px-6 py-3.5 text-base font-bold text-white shadow-md shadow-primary-600/20 hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60">
           {{ loading ? 'Iniciando sesión...' : 'Iniciar sesión' }}

@@ -5,7 +5,6 @@ import { DollarSign, OctagonAlert, FileText, X } from 'lucide-vue-next'
 import type { Dish , Recipe, CreateDish, UpdateDish } from '@/types/DishesDtos'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
 import DishesRecipeModal from '@/components/modals/DishesRecipeModal.vue'
-import { costoTotal } from '@/utils/recipeCost'
 
 const emit = defineEmits<{
   close: []
@@ -49,16 +48,18 @@ const validate = computed(() => {
     price.value !== null &&
     price.value >= 0 &&
     recipe.value.length !== 0 &&
-    price.value > precioFabricacion.value
+    price.value > fabricationCost.value
   )
 })
 
-// Precio de fabricación: suma del costo de cada insumo de la receta (solo informativo).
-const precioFabricacion = computed(() => costoTotal(recipe.value))
+const getFabricationCost = (items: Recipe[]): number =>
+  items.reduce((total, item) => total + item.quantity * item.product.costPrice, 0)
 
-// El editor devuelve la receta confirmada: se aplica y se vuelve al primer modal.
+// Se recalcula automáticamente cuando recipe.value cambia
+const fabricationCost = computed(() => getFabricationCost(recipe.value))
+
 const aplicarReceta = (nueva: Recipe[]) => {
-  recipe.value = nueva
+  recipe.value = nueva          // basta con esto
   recipeEnable.value = false
 }
 
@@ -80,10 +81,10 @@ const save=()=>{
         quantity:item.quantity
     }))
     if(props.isInsert){
-        console.log('Insertando platillo:', name.value, price.value, recipeRequest, precioFabricacion.value)
+        console.log('Insertando platillo:', name.value, price.value, recipeRequest, fabricationCost.value)
         emit('insert', name.value, price.value, recipeRequest)
     }else{
-        console.log('Actualizando:', name.value, price.value, recipeRequest, precioFabricacion.value)
+        console.log('Actualizando:', name.value, price.value, recipeRequest, fabricationCost.value)
         emit('update', name.value, price.value, recipeRequest)
     }
 }
@@ -242,7 +243,7 @@ const exportarPdf = async () => {
                 type="text"
                 readonly
                 tabindex="-1"
-                :value="precioFabricacion.toFixed(2)"
+                :value="fabricationCost.toFixed(2)"
                 class="w-full pl-10 pr-4 py-3 border rounded-xl
                        text-sm bg-neutral-200 text-neutral-700
                        font-medium cursor-default

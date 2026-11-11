@@ -118,6 +118,7 @@ const insertRow = async(name: string, price: number, recipe: CreateDish['recipe'
       await postDish(dish)
       modalInsertEnable.value = false
       mostrarToast('Platillo creado correctamente.','exito')
+      console.log(dish)
       await loadDishes()
   }catch(err){
       console.error('No se pudo crear el platillo:', err)
@@ -136,6 +137,7 @@ const updateRow = async(name: string, price: number, recipe: UpdateDish['recipe'
         await putDish(currentRow.value.id,dish)
         modalUpdateEnable.value = false
         mostrarToast('Platillo actualizado correctamente.','actualizar')
+        console.log(dish)
         await loadDishes()
     }catch(err){
         console.error('No se pudo actualizar el platillo:',err)

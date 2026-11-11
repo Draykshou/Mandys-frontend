@@ -10,7 +10,7 @@ export interface Product {
 export interface CreateProduct{
     description: string
     isSupply: boolean
-    salePrice: number
+    salePrice: number | null
     measureUnit: string
 }
 

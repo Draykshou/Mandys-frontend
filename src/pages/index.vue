@@ -112,7 +112,7 @@ const signOut = async () => {
 }
 
 const goToLogin = () => {
-  router.push('/login-cliente')
+  router.push('/login')
 }
 
 const placeOrder = () => {

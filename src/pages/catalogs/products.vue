@@ -24,7 +24,6 @@ definePage({
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
 const { state: auth} = useAuth()
-
 const rolUsuario = computed(() => auth.value.user?.role ?? '')
 
 interface CatalogoDef {
@@ -151,10 +150,10 @@ const insertRow = async (description: string, isSupply: boolean, salePrice: numb
   const product : CreateProduct = {
     description: description,
     isSupply: isSupply,
-    salePrice: salePrice,
+    salePrice: isSupply ? null : salePrice,
     measureUnit: measureUnit
   }
-  console.log("insert call")
+  console.log("insert call: " + product.salePrice)
 
   try {
     await postProduct(product)
