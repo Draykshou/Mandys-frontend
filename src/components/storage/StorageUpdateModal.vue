@@ -79,27 +79,27 @@ const saveUpdate = () => {
               <p class="rounded-r-lg border border-l-0 border-neutral-300 bg-neutral-100 px-3 py-2 text-secondary-700">
                 {{ CONVERSIONES[props.measureUnit].etiqueta}}
               </p>
-            </div>
-
-            <p v-if="!canSave" class="text-red-500 text-sm mt-2">Por favor, ingrese un valor válido para el stock mínimo.</p>
-
-            <div class="flex justify-between">
-              <button
-                type="button"
-                class="rounded-lg bg-neutral-50 px-4 py-2 text-secondary-800 border border-neutral-300 hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-200 focus:ring-offset-2"
-                @click="emit('close')"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                class="ml-2 rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-                @click="saveUpdate"
-              >
-                Guardar
-              </button>
-            </div>
-         </div>
+            </div>        
+            <p v-if="!canSave" class="text-red-500 text-sm mt-2">Por favor, ingrese un valor válido para el stock mínimo.</p>                  
+          </div>
+          
+          <div class=" flex justify-between bg-neutral-100 border-t border-neutral-200 p-4">
+            
+            <button
+              type="button"
+              class="rounded-lg bg-neutral-50 px-4 py-2 text-secondary-800 border border-neutral-300 hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-200 focus:ring-offset-2"
+            @click="emit('close')"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="ml-2 rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+              @click="saveUpdate"
+            >
+              Guardar
+            </button>
+          </div>
       </div>
   </div>
 </template>

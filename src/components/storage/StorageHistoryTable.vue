@@ -57,6 +57,8 @@ const formatoFecha = new Intl.DateTimeFormat('es-MX', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
 })
 
 function formatFecha(valor: string | null) {
@@ -105,8 +107,8 @@ type Unidad = Storage['product']['measureUnit']
 
 const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
     Unidades: { etiqueta: 'u', factor: 1 },
-    Gramos: { etiqueta: 'kg', factor: 1000 },
-    Mililitros: { etiqueta: 'l', factor: 1000 },
+    Kilogramos: { etiqueta: 'kg', factor: 1000 },
+    Litros: { etiqueta: 'l', factor: 1000 },
 }
 const convertirCostoVista = (costo: number, unidad: Unidad): string => {
     return '$ ' + String(costo * CONVERSIONES[unidad].factor) + ' ' + CONVERSIONES[unidad].etiqueta
@@ -163,8 +165,8 @@ const rangoMostrado = computed(() => {
                         class="border-t border-neutral-200"
                         >
                         <td class="px-3 py-2">{{ row.product.description }}</td>
-                        <td class="px-3 py-2 text-right">{{ row.quantity }}</td>
-                        <td class="px-3 py-2 text-right">{{ formatoMoneda(row.costPrice) }}</td>
+                        <td class="px-3 py-2 text-right">{{ row.quantity + ' ' + CONVERSIONES[row.product.measureUnit].etiqueta }}</td>
+                        <td class="px-3 py-2 text-right">{{ formatoMoneda(row.costPrice) +  ' por ' + CONVERSIONES[row.product.measureUnit].etiqueta }}</td>
                         <td class="px-3 py-2 text-right">{{ formatoMoneda(row.quantity * row.costPrice) }}</td>
                         <template v-if="esVenta">
                             <td class="px-3 py-2 text-right">{{ formatoMoneda(row.product.salePrice) }}</td>
@@ -193,37 +195,9 @@ const rangoMostrado = computed(() => {
                 </div>
             </div>
 
-            <div class="flex justify-center border-t border-neutral-200 p-4">
+            <div class=" flex justify-center bg-neutral-100 border-t border-neutral-200 p-4">
                 <button class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-neutral-50 py-3 px-7 rounded-xl shadow-xl"
                         @click="modalProductos = false">
-                    Cerrar
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div
-    v-if="modalDetalles"
-    class="fixed inset-0 z-50 flex items-center justify-center p-4"
-    style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"
-    >
-        <div 
-        class="flex flex-col rounded-2xl shadow-2xl w-full max-w-150 bg-neutral-50 overflow-hidden" style="max-height: 92vh;">
-
-            <!-- Encabezado del modal -->
-            <div class="border-b border-neutral-200 p-4 text-center">
-                <h1 class="text-secondary-800 text-2xl font-bold">Detalles del movimiento</h1>
-                <p class="text-neutral-700">Vea los detalles de las entradas y salidas</p>
-            </div>
-
-            <!-- Contenido del modal -->
-            <div class="flex flex-col gap-4 p-6 overflow-y-auto min-h-0">
-                
-            </div>
-
-            <div class="flex justify-center border-t border-neutral-200 p-4">
-                <button class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-neutral-50 py-3 px-7 rounded-xl shadow-xl"
-                        @click="modalDetalles = false">
                     Cerrar
                 </button>
             </div>

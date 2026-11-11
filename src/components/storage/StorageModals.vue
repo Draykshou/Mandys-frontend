@@ -537,14 +537,14 @@ onMounted(() => {
     style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
     <div class="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-neutral-50 shadow-2xl"
       style="max-height: 85vh;">
-      <div class="border-b border-neutral-200 px-6 py-4">
-        <h3 class="text-title text-secondary-900" style="font-size: 1.125rem">{{ t.confirmarTitulo }}</h3>
-        <p class="text-caption text-neutral-500">
-          Se registrará {{ t.accion }} de {{ seleccionados.length }}
-          {{ seleccionados.length === 1 ? 'producto' : 'productos' }} {{ t.destino }}
-          con el folio <span class="font-semibold text-secondary-800">{{ folio.trim() }}</span>.
-          {{ t.revisar }}
+      <div class="border-b border-neutral-200 px-6 py-4 text-neutral-500"">
+        <h2 class=" text-secondary-900 text-2xl font-bold">{{ t.confirmarTitulo }}</h2>
+        <p class="">
+          Total de productos: <span class="font-bold text-black">{{ seleccionados.length }}</span>
         </p>
+        <p v-if="esEntrada">Proveedor: <span class="font-semibold text-secondary-800">{{ supplierName.trim() }}</span></p>
+        <p v-if="esEntrada">Folio: <span class="font-semibold text-secondary-800">{{ folio.trim() }}</span></p>
+        <p v-if="!esEntrada">Razon: <span class="font-semibold text-secondary-800">{{ reason.trim() }}</span></p>
       </div>
 
       <ul class="min-h-0 flex-1 divide-y divide-neutral-200 overflow-y-auto px-6">
@@ -562,14 +562,14 @@ onMounted(() => {
         </li>
       </ul>
 
-      <div class="flex justify-end gap-3 border-t border-neutral-200 px-6 py-4">
+      <div class="flex justify-between border-t bg-neutral-100 border-neutral-200 p-4">
         <button type="button"
-          class="rounded-xl border border-neutral-300 bg-white px-5 py-2 text-label text-secondary-800 hover:bg-neutral-100 active:bg-neutral-200"
+          class="flex justify-center items-center h-12 w-44 rounded-xl border border-neutral-300 bg-white p-4 text-secondary-800 hover:bg-neutral-100 active:bg-neutral-200"
           @click="confirmando = false">
           Cancelar
         </button>
         <button type="button"
-          class="rounded-xl px-5 py-2 text-label text-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+          class="flex justify-center items-center h-12 w-44 rounded-xl p-4 text-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
           :class="t.boton" :disabled="enviando" @click="confirmar">
           {{ t.confirmar }}
         </button>
