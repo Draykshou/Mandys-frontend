@@ -131,8 +131,6 @@ const placeOrder = () => {
       <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap sm:gap-4 sm:px-8 sm:py-4">
         <img src="@/assets/mandys_text.svg" alt="Mandy's" class="h-9 w-28 shrink-0 object-contain object-left" />
         <div class="hidden items-center gap-2 text-xs text-secondary-500 lg:flex">
-          <span class="rounded-full bg-primary-50 px-3 py-1 font-semibold text-primary-700">Entrega a domicilio</span>
-          <span>Tiempo estimado: 25-35 min</span>
         </div>
         <label class="relative order-3 min-w-0 basis-full sm:order-none sm:ml-auto sm:w-full sm:basis-auto sm:max-w-xs">
           <Search :size="17" class="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400" />
@@ -143,7 +141,7 @@ const placeOrder = () => {
             <LogIn :size="15" /> <span class="hidden sm:inline">Iniciar sesión</span><span class="sm:hidden">Acceder</span>
           </button>
           <template v-else>
-            <span class="hidden text-xs font-semibold text-secondary-700 sm:inline">Bienvenido, {{ authState.user?.firstName }}</span>
+            <span class="border border-neutral-200 rounded-4xl p-3 hidden text-xs font-bold text-secondary-900 sm:inline">Bienvenido, {{ authState.user?.firstName }}</span>
             <button type="button" class="flex items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2 text-xs font-semibold text-secondary-700 hover:border-primary-300" @click="signOut">
               <LogOut :size="15" /> <span class="hidden sm:inline">Salir</span>
             </button>

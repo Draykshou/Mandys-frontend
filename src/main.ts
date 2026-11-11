@@ -42,11 +42,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.roles && !to.meta.roles.includes(user.role)) {
-<<<<<<< HEAD
-    return { path: "/catalogs/home" }; 
-=======
     return { path: user.role === "Cliente" ? "/menu" : "/catalogs/home" };
->>>>>>> origin/dev/carlos
   }
 
   return true;
