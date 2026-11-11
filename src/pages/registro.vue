@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
 import { ArrowLeft, Eye, EyeOff, UserPlus } from 'lucide-vue-next'
 import { postCustomer } from '@/service/CustomersService'
 import { mensajeDeError } from '@/utils/apiError'
+import AppToast from '@/components/AppToast.vue'
+import { useToast } from '@/composables/useToast'
+import { useRouter } from 'vue-router'
 
 definePage({ meta: { public: true } })
 
+const router = useRouter()
+const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 const firstName = ref('')
 const fatherLastName = ref('')
 const motherLastName = ref('')
@@ -15,12 +20,11 @@ const confirmPassword = ref('')
 const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
-const success = ref('')
+let redirectTimer: ReturnType<typeof setTimeout> | undefined
 
 const handleRegister = async () => {
   if (loading.value) return
   error.value = ''
-  success.value = ''
   if (password.value !== confirmPassword.value) {
     error.value = 'Las contraseñas no coinciden.'
     return
@@ -34,7 +38,10 @@ const handleRegister = async () => {
       password: password.value,
       motherLastName: motherLastName.value || null,
     })
-    success.value = 'Tu cuenta fue creada. Ya puedes iniciar sesión.'
+    mostrarToast('Tu cuenta fue creada. Redirigiendo al inicio de sesión...', 'exito')
+    redirectTimer = setTimeout(() => {
+      router.push('/login-cliente')
+    }, toast.duracion)
     firstName.value = ''
     fatherLastName.value = ''
     motherLastName.value = ''
@@ -51,6 +58,10 @@ const handleRegister = async () => {
     loading.value = false
   }
 }
+
+onBeforeUnmount(() => {
+  clearTimeout(redirectTimer)
+})
 </script>
 
 <template>
@@ -66,8 +77,6 @@ const handleRegister = async () => {
       </div>
 
       <div v-if="error" class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{{ error }}</div>
-      <div v-if="success" class="mb-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700" role="status">{{ success }}</div>
-
       <form class="space-y-4" @submit.prevent="handleRegister">
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="space-y-2 text-sm font-semibold">Nombre<input v-model="firstName" class="field-control field-control-ok h-12 px-4" autocomplete="given-name" required /></label>
@@ -84,5 +93,13 @@ const handleRegister = async () => {
         </button>
       </form>
     </section>
+
+    <AppToast
+      :visible="toast.visible"
+      :mensaje="toast.mensaje"
+      :tipo="toast.tipo"
+      :duracion="toast.duracion"
+      @cerrar="cerrarToast"
+    />
   </main>
 </template>

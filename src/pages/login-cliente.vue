@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { Mail, Key, Eye, EyeOff } from 'lucide-vue-next'
 import useAuth from '@/composables/useAuth'
 
 definePage({ meta: { public: true } })
 
-const route = useRoute()
 const router = useRouter()
 const { login: authenticate } = useAuth()
 const email = ref('')
@@ -23,12 +22,7 @@ const handleLogin = async () => {
 
   try {
     await authenticate({ email: email.value, password: password.value })
-    const redirect = route.query.redirect
-    const destination =
-      typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
-        ? redirect
-        : '/menu'
-    await router.push(destination)
+    await router.push('/menu')
   } catch (requestError) {
     console.error('Error al iniciar sesión del cliente:', requestError)
     error.value = 'Las credenciales son incorrectas o no fue posible iniciar sesión.'
