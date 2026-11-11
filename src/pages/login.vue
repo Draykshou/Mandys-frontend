@@ -74,7 +74,7 @@ const handleLogin = async () => {
           Por favor, ingresa tus credenciales para acceder al sistema de gestión de Mandy's POS.
         </p>
       </div>
-
+      
       <div
         v-if="error"
         class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 login-anim"
@@ -116,8 +116,17 @@ const handleLogin = async () => {
           </div>
         </div>
 
+        <!-- Remember Me -->
+        <div class="pt-2 login-anim">
+          <label class="flex items-center gap-3 cursor-pointer group w-max">
+            <div class="w-6 h-6 rounded flex items-center justify-center transition-colors border-2" :class="remember ? 'bg-[#c04a33] border-[#c04a33]' : 'bg-white border-[#e5e0d8] group-hover:border-[#c04a33]'">
+              <svg v-if="remember" class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <input type="checkbox" v-model="remember" class="hidden" />
+            <span class="text-[15px] text-stone-600">Recordar sesión en esta terminal</span>
+          </label>
+        </div>
         
-
         <!-- Submit -->
         <div class="pt-4 login-anim">
           <button type="submit" class="w-full bg-[#c04a33] hover:bg-[#a83e29] text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md text-lg">

@@ -14,15 +14,27 @@ export const router = createRouter({
 router.beforeEach(async (to) => {
   const { state, loadUser } = useAuth();
 
+  // El menú es público: no debe bloquearse por una sesión ausente
+  // ni provocar una llamada innecesaria a /users/me.
+  if (to.path === "/menu") {
+    return true;
+  }
+
   // Primera carga: esperar a saber si hay sesión
   if (state.value.status === "loading") await loadUser();
 
   const { status, user } = state.value;
   const isAuth = status === "authenticated";
 
+  if (isAuth && user.role === "Cliente" && to.path.startsWith("/catalogs")) {
+    return { path: "/menu", replace: true };
+  }
+
   if (to.meta.public) {
     // Ya esta logueado
-    return isAuth && to.path === "/login" ? { path: "/catalogs/home" } : true;
+    return isAuth && to.path === "/login"
+      ? { path: user.role === "Cliente" ? "/menu" : "/catalogs/home", replace: true }
+      : true;
   }
 
   if (!isAuth) {
@@ -30,7 +42,11 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.roles && !to.meta.roles.includes(user.role)) {
+<<<<<<< HEAD
     return { path: "/catalogs/home" }; 
+=======
+    return { path: user.role === "Cliente" ? "/menu" : "/catalogs/home" };
+>>>>>>> origin/dev/carlos
   }
 
   return true;
