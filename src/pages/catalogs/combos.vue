@@ -34,7 +34,7 @@ const CombosColumn: CatalogoDef = {
   columns: [
     { key: 'name', label: 'Nombre', type: 'text' },
     { key: 'price', label: 'Precio', type: 'currency' },
-    { key: 'dishes', label: 'Cotenido', type: 'button' },
+    { key: 'dishes', label: 'Contenido', type: 'button' },
   ],
 }
 

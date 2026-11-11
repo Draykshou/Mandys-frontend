@@ -16,7 +16,7 @@ router.beforeEach(async (to) => {
 
   // El menú es público: no debe bloquearse por una sesión ausente
   // ni provocar una llamada innecesaria a /users/me.
-  if (to.path === "/menu") {
+  if (to.path === "/") {
     return true;
   }
 
@@ -27,13 +27,13 @@ router.beforeEach(async (to) => {
   const isAuth = status === "authenticated";
 
   if (isAuth && user.role === "Cliente" && to.path.startsWith("/catalogs")) {
-    return { path: "/menu", replace: true };
+    return { path: "/", replace: true };
   }
 
   if (to.meta.public) {
     // Ya esta logueado
     return isAuth && to.path === "/login"
-      ? { path: user.role === "Cliente" ? "/menu" : "/catalogs/home", replace: true }
+      ? { path: user.role === "Cliente" ? "/" : "/catalogs/home", replace: true }
       : true;
   }
 
@@ -42,7 +42,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.roles && !to.meta.roles.includes(user.role)) {
-    return { path: user.role === "Cliente" ? "/menu" : "/catalogs/home" };
+    return { path: user.role === "Cliente" ? "/" : "/catalogs/home" };
   }
 
   return true;

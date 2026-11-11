@@ -1,7 +1,8 @@
 export interface Customer{
     id: number
     firstName: string
-    lastName: string
+    fatherLastName: string
+    motherLastName: string | null
     email: string
 }
 

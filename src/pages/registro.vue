@@ -40,7 +40,7 @@ const handleRegister = async () => {
     })
     mostrarToast('Tu cuenta fue creada. Redirigiendo al inicio de sesión...', 'exito')
     redirectTimer = setTimeout(() => {
-      router.push('/login')
+      router.push('/')
     }, toast.duracion)
     firstName.value = ''
     fatherLastName.value = ''
