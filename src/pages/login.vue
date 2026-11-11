@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import {
   Mail,
   Key,
@@ -11,6 +11,9 @@ import useAuth from '@/composables/useAuth'
 import { useAnime } from '@/composables/useAnime'
 import { stagger } from 'animejs'
 
+definePage({ meta: { public: true } });
+
+const route = useRoute()
 const router = useRouter()
 const { login: authenticate } = useAuth()
 
@@ -40,7 +43,10 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-    await router.push('/catalogs/home')
+    const redirect = route.query.redirect
+    const destino =
+      typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/catalogs/home'
+    await router.push(destino)
   } catch (err) {
     console.error('Error al iniciar sesión:', err)
 
@@ -68,7 +74,7 @@ const handleLogin = async () => {
           Por favor, ingresa tus credenciales para acceder al sistema de gestión de Mandy's POS.
         </p>
       </div>
-
+      
       <div
         v-if="error"
         class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 login-anim"
@@ -98,7 +104,6 @@ const handleLogin = async () => {
             <label class="text-xs font-bold text-[#1a1a1a] uppercase tracking-wide flex">
               CONTRASEÑA <span class="text-[#c04a33] ml-1">*</span>
             </label>
-            <a href="#" class="text-sm font-semibold text-[#c04a33] hover:text-[#a83e29] transition-colors">¿Olvidaste tu contraseña?</a>
           </div>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-stone-400">
@@ -121,7 +126,7 @@ const handleLogin = async () => {
             <span class="text-[15px] text-stone-600">Recordar sesión en esta terminal</span>
           </label>
         </div>
-
+        
         <!-- Submit -->
         <div class="pt-4 login-anim">
           <button type="submit" class="w-full bg-[#c04a33] hover:bg-[#a83e29] text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md text-lg">

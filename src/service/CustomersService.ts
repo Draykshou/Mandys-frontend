@@ -19,7 +19,7 @@ export async function getCustomers(
 }
 
 export async function postCustomer(payload: RegisterCustomer): Promise<Customer> {
-    const response = await api.post<Customer>("/customers/register", payload)
+    const response = await api.post<Customer>("/customers", payload)
     return response.data
 }
 

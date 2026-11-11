@@ -11,6 +11,7 @@ export interface AuthUser {
   email: string;
   firstName: string;
   lastName: string;
+  branchId: number;
   role: "Administrador" | "Gerente de Operaciones" | "Encargado de Almacen Central" | "Encargado de Almacen" | "Cajero" | "Jefe Cocina" | "Gerente Sucursal" | "Cliente";
 }
 
@@ -89,10 +90,13 @@ export default function useAuth() {
     }
   };
 
+  const clearSession = () => { authState.value = { user: null, status: "unauthenticated" }; };
+
   return {
     loadUser,
     state: readonly(authState),
     login,
     logout,
+    clearSession,
   };
 }

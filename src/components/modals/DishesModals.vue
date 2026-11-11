@@ -1,11 +1,11 @@
 <script setup lang="ts">
 
-import { ref, computed, watch } from 'vue'
-import { DollarSign, OctagonAlert, Trash2, FileText } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { DollarSign, OctagonAlert, FileText, X } from 'lucide-vue-next'
 import type { Dish , Recipe, CreateDish, UpdateDish } from '@/types/DishesDtos'
-import type { Product } from '@/types/ProductsDtos'
-import { getProducts } from '@/service/ProductsService'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
+import DishesRecipeModal from '@/components/modals/DishesRecipeModal.vue'
+import { costoTotal } from '@/utils/recipeCost'
 
 const emit = defineEmits<{
   close: []
@@ -38,13 +38,6 @@ const price=ref<number|null>(props.dish?.price??null)
 const recipe=ref<Recipe[]>(props.dish?.recipe?[...props.dish.recipe]:[])
 
 
-const productoSeleccionado=ref<Product|null>(null)
-const quantity=ref<number|null>(null)
-
-const products = ref<Product[]>([])
-const productSearch = ref('')
-const productLoading = ref(false)
-
 const reason = ref('')
 const recipeEnable = ref(false)
 const firstDeleteModel = ref(props.isDelete ?? '')
@@ -55,72 +48,36 @@ const validate = computed(() => {
     name.value.trim() !== '' &&
     price.value !== null &&
     price.value >= 0 &&
-    recipe.value.length !== 0
+    recipe.value.length !== 0 &&
+    price.value > precioFabricacion.value
   )
 })
 
-const searchProducts = async () => {
-    const search = productSearch.value.trim()
+// Precio de fabricación: suma del costo de cada insumo de la receta (solo informativo).
+const precioFabricacion = computed(() => costoTotal(recipe.value))
 
-    if (!search) {
-        products.value = []
-        return
-    }
-
-    try {
-        productLoading.value = true
-
-        const response = await getProducts(1, 20, search, 'description', true)
-        products.value = response.items
-    } catch (err) {
-        console.error('No se pudieron buscar los productos:', err)
-        products.value = []
-    } finally {
-        productLoading.value = false
-    }
+// El editor devuelve la receta confirmada: se aplica y se vuelve al primer modal.
+const aplicarReceta = (nueva: Recipe[]) => {
+  recipe.value = nueva
+  recipeEnable.value = false
 }
 
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
-
-watch(productSearch, () => {
-    if (searchTimeout) {
-        clearTimeout(searchTimeout)
-    }
-
-    searchTimeout = setTimeout(() => {
-        searchProducts()
-    }, 300)
-})
-
-const selectProduct=(product:Product)=>{
-    productoSeleccionado.value=product
-    productSearch.value=product.description
-}
-
-const addProducts=()=>{
-    if(!productoSeleccionado.value)return
-    if(quantity.value===null||quantity.value<=0)return
-    const productoExistente=recipe.value.find(item=>item.product.id===productoSeleccionado.value!.id)
-    if(productoExistente){
-        productoExistente.quantity=quantity.value
-    }else{
-        recipe.value.push({
-            product:productoSeleccionado.value,
-            quantity:quantity.value
-        })
-    }
-    productSearch.value=''
-    productoSeleccionado.value=null
-    quantity.value=null
-}
-
-const deleteProducts=(productId:number)=>{
-    recipe.value = recipe.value.filter(item => item.product.id !== productId)
+// Con el editor de receta abierto, un clic en el fondo no cierra todo (se perderían los cambios).
+const cerrarPorFondo = () => {
+  if (recipeEnable.value) return
+  emit('close')
 }
 
 const changeDeleteModal = () => {
   reasonModalEnable.value = true
   firstDeleteModel.value = false
+}
+
+type Unidad = Storage['product']['measureUnit']
+const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
+  Unidades: { etiqueta: 'u', factor: 1 },
+  Kilogramos: { etiqueta: 'g', factor: 1000 },
+  Litros: { etiqueta: 'ml', factor: 1000 },
 }
 
 const save=()=>{
@@ -130,8 +87,10 @@ const save=()=>{
         quantity:item.quantity
     }))
     if(props.isInsert){
+        console.log('Insertando platillo:', name.value, price.value, recipeRequest, precioFabricacion.value)
         emit('insert', name.value, price.value, recipeRequest)
     }else{
+        console.log('Actualizando:', name.value, price.value, recipeRequest, precioFabricacion.value)
         emit('update', name.value, price.value, recipeRequest)
     }
 }
@@ -194,12 +153,13 @@ const exportarPdf = async () => {
   <div
     class="fixed inset-0 z-50 flex items-center justify-center p-4"
     style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"
-    @click.self="emit('close')"
+    @click.self="cerrarPorFondo"
   >
 
     <!-- Modal de insertar / editar -->
     <div
-      v-if="!isDelete && !isAction" 
+      v-if="!isDelete && !isAction"
+      v-show="!recipeEnable"
       class="flex flex-col rounded-2xl shadow-2xl w-full max-w-xl bg-neutral-50 overflow-hidden" style="max-height: 92vh;">
       <!-- Encabezado del modal-->
       <div class="border-b border-neutral-200 p-4">
@@ -236,41 +196,73 @@ const exportarPdf = async () => {
 
         </div>
 
-        <!-- Precio -->
-        <div class="px-8 pt-4">
+        <!-- Precio y precio de fabricación -->
+        <div class="flex flex-wrap gap-4 px-8 pt-4">
 
-          <label
-            class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5"
-          >
-            Precio
-            <span class="text-red-500">*</span>
-          </label>
-          <div class="relative">
-            <div
-              class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
+          <div class="min-w-44 max-w-60 flex-1">
+            <label
+              class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5"
             >
-              <DollarSign
-                :size="16"
-                class="text-neutral-800"
+              Precio
+              <span class="text-red-500">*</span>
+            </label>
+            <div class="relative">
+              <div
+                class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
+              >
+                <DollarSign
+                  :size="16"
+                  class="text-neutral-800"
+                />
+              </div>
+              <input
+                v-model="price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                class="w-full pl-10 pr-4 py-3 border rounded-xl
+                       text-sm bg-neutral-100 text-neutral-800
+                       font-medium transition-all
+                       focus:outline-none focus:ring-1"
               />
             </div>
-            <input
-              v-model="price"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              class="w-full max-w-60 pl-10 pr-4 py-3 border rounded-xl
-                     text-sm bg-neutral-100 text-neutral-800
-                     font-medium transition-all
-                     focus:outline-none focus:ring-1"
-            />
           </div>
+
+          <!-- Solo informativo: se calcula con la receta -->
+          <div class="min-w-44 max-w-60 flex-1">
+            <label
+              class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5"
+            >
+              Precio de elaboración
+            </label>
+            <div class="relative">
+              <div
+                class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
+              >
+                <DollarSign
+                  :size="16"
+                  class="text-neutral-800"
+                />
+              </div>
+              <input
+                type="text"
+                readonly
+                tabindex="-1"
+                :value="precioFabricacion.toFixed(2)"
+                class="w-full pl-10 pr-4 py-3 border rounded-xl
+                       text-sm bg-neutral-200 text-neutral-700
+                       font-medium cursor-default
+                       focus:outline-none"
+              />
+            </div>
+          </div>
+
         </div>
 
         <!-- Receta -->
         <div class="px-8 pt-6 pb-8 flex flex-col items-center">
-          <label class="block text-xs text-center font-bold text-neutral-600 uppercase tracking-wider mb-1.5">Pulsa el boton para ver o editar la receta la receta</label>
+          <label class="block text-xs text-center font-bold text-neutral-600 uppercase tracking-wider mb-1.5">Pulsa el boton para ver o editar la receta</label>
           <button
           type="button"
           class="bg-primary-600 hover:bg-primary-700
@@ -280,7 +272,7 @@ const exportarPdf = async () => {
                  disabled:text-neutral-500
                  disabled:cursor-not-allowed
                  disabled:shadow-none"
-          @click="recipeEnable = !recipeEnable">
+          @click="recipeEnable = true">
             Receta
           </button>
         </div>
@@ -317,90 +309,67 @@ const exportarPdf = async () => {
       </div>
     </div>
 
-    <!-- Modal de tabla -->
-    <div v-if="recipeEnable || isAction" class="flex flex-col w-full h-full max-h-150 max-w-2xl rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden ml-8">
-      <div class="border-b border-neutral-200 p-4 shrink-0">
+    <!-- Editor de receta (agregar / quitar productos) -->
+    <DishesRecipeModal
+      v-if="recipeEnable && !isAction"
+      :recipe="recipe"
+      @close="recipeEnable = false"
+      @confirm="aplicarReceta"
+    />
+
+    <!-- Ver receta (solo lectura) -->
+    <div v-if="isAction" class="flex flex-col w-full h-full max-h-150 max-w-2xl rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden ml-8">
+      <div class="flex items-start justify-between border-b border-neutral-200 p-4 shrink-0">
+        <div>
           <h2 class="text-secondary-800 text-2xl font-bold">Receta</h2>
           <p class="text-neutral-700">Productos utilizados en el platillo</p>
+        </div>
+
+        <button
+          type="button"
+          aria-label="Cerrar modal"
+          class="ml-4 shrink-0 rounded-lg p-1 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-secondary-800"
+          @click="emit('close')"
+        >
+          <X :size="22" />
+        </button>
       </div>
       <div class="p-6 flex-1 min-h-0">
-          <div class="border border-neutral-200 rounded-xl overflow-hidden h-full">
-              <div class="h-full overflow-y-auto">
-                  <table class="w-full text-sm">
-                      <thead class="sticky top-0 bg-neutral-100">
-                          <tr>
-                              <th class="text-left px-4 py-3">Producto</th>
-                              <th class="text-center px-4 py-3">Cantidad</th>
-                              <th class="text-left px-4 py-3">Unidad de medida</th>
-                              <th class="w-16 px-4 py-3"></th>
-                          </tr>
-                      </thead>
-                      <tbody>
-                          <tr v-for="item in recipe" :key="item.product.id" class="border-t border-neutral-200">
-                              <td class="px-4 py-3">{{item.product.description}}</td>
-                              <td class="px-4 py-3 text-center">{{item.quantity}}</td>
-                              <td class="px-4 py-3">{{item.product.measureUnit}}</td>
-                              <td class="px-4 py-3 text-center">
-                                  <button v-if="!isAction" 
-                                    type="button" 
-                                    class="text-red-500 hover:text-red-700" 
-                                    @click="deleteProducts(item.product.id)">
-                                      <Trash2 :size="18"/>
-                                  </button>
-                              </td>
-                          </tr>
-                          <tr v-if="recipe.length===0">
-                              <td colspan="4" class="px-4 py-8 text-center text-neutral-500">No hay productos en la receta.</td>
-                          </tr>
-                      </tbody>
-                  </table>
-              </div>
+        <div class="border border-neutral-200 rounded-xl overflow-hidden h-full">
+          <div class="h-full overflow-y-auto">
+            <table class="w-full text-sm">
+              <thead class="sticky top-0 bg-neutral-100">
+                <tr>
+                  <th class="text-left px-4 py-3">Producto</th>
+                  <th class="text-center px-4 py-3">Cantidad</th>
+                  <th class="text-left px-4 py-3">Unidad de medida</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in recipe" :key="item.product.id" class="border-t border-neutral-200">
+                  <td class="px-4 py-3">{{item.product.description}}</td>
+                  <td class="px-4 py-3 text-center">{{item.quantity}}</td>
+                  <td class="px-4 py-3">{{item.product.measureUnit}}</td>
+                </tr>
+                <tr v-if="recipe.length===0">
+                  <td colspan="3" class="px-4 py-8 text-center text-neutral-500">No hay productos en la receta.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+        </div>
       </div>
 
-      <div class="p-6 pt-0 shrink-0">
-          <div class="space-y-3">
-              <div class="flex gap-3">
-                  <div class="flex-1 relative">
-                      <input 
-                        v-if="!isAction"
-                        v-model="productSearch" 
-                        type="text" placeholder="Buscar producto..." 
-                        class="w-full px-4 py-3 border rounded-xl"/>
-                      <div v-if="products.length > 0" class="absolute z-20 w-full bottom-full mb-1 bg-white border rounded-xl shadow-lg max-h-40 overflow-y-auto">
-                          <button 
-                            v-for="product in products" 
-                            :key="product.id" 
-                            type="button" 
-                            class="w-full text-left px-4 py-2 hover:bg-neutral-100" 
-                            @click="selectProduct(product)">
-                            {{product.description}}
-                          </button>
-                      </div>
-                  </div>
-                  <input v-if="!isAction" v-model="quantity" type="number" min="1" step="1" placeholder="Cantidad" class="w-32 px-4 py-3 border rounded-xl"/>
-              </div>
-              <div class="flex justify-center">
-                <button 
-                  v-if="!isAction"
-                  type="button" 
-                  class="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed" 
-                  :disabled="!productoSeleccionado||quantity===null||quantity<=0" 
-                  @click="addProducts">
-                  Agregar producto
-                </button>
-                <button
-                  v-if="isAction"
-                  type="button"
-                  class="w-full max-w-50 bg-primary-600 hover:bg-primary-500 active:bg-primary-400 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed
-                  flex flex-row gap-2 justify-center"
-                  @click="exportarPdf"
-                >
-                  <FileText :size="24" class=" text-neutral-50"/>
-                  Exportar PDF
-                </button>
-              </div>
-          </div>
+      <div class="p-6 pt-0 shrink-0 flex justify-center">
+        <button
+          type="button"
+          class="w-full max-w-50 bg-primary-600 hover:bg-primary-500 active:bg-primary-400 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed
+          flex flex-row gap-2 justify-center"
+          @click="exportarPdf"
+        >
+          <FileText :size="24" class=" text-neutral-50"/>
+          Exportar PDF
+        </button>
       </div>
     </div>
 

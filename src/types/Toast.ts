@@ -4,4 +4,4 @@
  *  eliminar -> baja
  *  error    -> la acción falló
  */
-export type ToastTipo = 'exito' | 'eliminar' | 'actualizar' |'error'
+export type ToastTipo = 'exito' | 'eliminar' | 'actualizar' | 'error' | 'entrada' | 'salida'

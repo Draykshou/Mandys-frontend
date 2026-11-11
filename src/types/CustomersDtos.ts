@@ -7,9 +7,10 @@ export interface Customer{
 
 export interface RegisterCustomer{
     firstName: string
-    lastName: string
+    fatherLastName: string
     email: string
     password: string
+    motherLastName?: string | null
 }
 
 export interface UpdateCustomer{

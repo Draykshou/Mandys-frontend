@@ -11,18 +11,31 @@ import {
   Store,
   Users,
   Warehouse,
+  Salad,
 } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import useAuth from '@/composables/useAuth'
 import LogoutConfirmToast from '@/components/LogoutConfirmToast.vue'
+
+import { animate } from 'animejs'
+import mandysLogoImg from '@/assets/mandys_icon.png'
+import mandysTextImg from '@/assets/mandys_text.svg'
 
 const route = useRoute()
 const router = useRouter()
 const { state: auth, logout } = useAuth()
 
 const abierto = ref(true)
+const logoRef = ref<HTMLElement | null>(null)
 
 function alternar() {
+  const target = logoRef.value || '.mandys-logo'
+  animate(target, {
+    rotate: '+=1turn',
+    duration: 350,
+    ease: 'inOutSine',
+  })
+
   abierto.value = !abierto.value
 }
 
@@ -32,7 +45,7 @@ const menuItems = computed(() => [
     label: 'Inicio',
     icon: House,
     path: '/catalogs/home',
-    roles: ['Administrador', 'Gerente de Operaciones', 'Gerente Sucursal', 'Encargado de Almacen Central', 'Encargado de Almacen'],
+    roles: ['Administrador', 'Gerente de Operaciones', 'Gerente Sucursal', 'Encargado de Almacen Central', 'Encargado de Almacen', 'Cliente'],
   },
   {
     key: 'products',
@@ -44,7 +57,7 @@ const menuItems = computed(() => [
   {
     key: 'dishes',
     label: 'Platillos',
-    icon: ShoppingCart,
+    icon: Salad,
     path: '/catalogs/dishes',
     roles: ['Administrador', 'Gerente de Operaciones'],
   },
@@ -60,7 +73,7 @@ const menuItems = computed(() => [
     label: 'Almacén',
     icon: Warehouse,
     path: '/catalogs/storage',
-    roles: ['Administrador', 'Encargado de Almacen Central', 'Encargado de Almacen'],
+    roles: ['Administrador', 'Encargado de Almacen Central', 'Encargado de Almacen', 'Gerente de Operaciones'],
   },
   {
     key: 'branches',
@@ -148,13 +161,13 @@ onBeforeUnmount(limpiarTemporizadorSalida)
 
 <template>
   <aside
-    class="relative flex h-full min-h-0 shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 transition-all duration-300"
+    class="relative z-50 -mt-16 flex h-screen min-h-0 shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 transition-all duration-300"
     :class="abierto ? 'w-60' : 'w-20 items-center'"
   >
     <!-- Flecha lateral para expandir o guardar el menú -->
     <button
       type="button"
-      class="absolute -right-3 top-4 flex h-7 w-7 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-secondary-500 shadow-sm transition-colors hover:bg-neutral-100"
+      class="absolute -right-3 top-4.5 z-50 flex h-7 w-7 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-secondary-500 shadow-sm transition-colors hover:bg-neutral-100"
       :title="abierto ? 'Guardar menú' : 'Expandir menú'"
       :aria-label="abierto ? 'Guardar menú' : 'Expandir menú'"
       :aria-expanded="abierto"
@@ -163,21 +176,45 @@ onBeforeUnmount(limpiarTemporizadorSalida)
       <component :is="abierto ? ChevronLeft : ChevronRight" :size="16" />
     </button>
 
+    <!-- Logo y Título Mandy's -->
+    <div
+      class="flex h-16 w-full shrink-0 items-center border-b border-neutral-200 bg-neutral-50 transition-all duration-300"
+      :class="abierto ? 'justify-start px-4 gap-3' : 'justify-center px-0'"
+    >
+      <div
+        ref="logoRef"
+        class="mandys-logo relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-neutral-200 bg-white shadow-sm"
+      >
+        <img
+          :src="mandysLogoImg"
+          alt="Mandy's"
+          class="h-full w-full object-cover"
+        />
+      </div>
+
+      <img
+        :src="mandysTextImg"
+        alt="Mandy's"
+        class="h-9 w-auto object-contain select-none transition-all duration-300"
+        :class="abierto ? 'max-w-[130px] opacity-100' : 'max-w-0 opacity-0 pointer-events-none'"
+      />
+    </div>
+
     <!-- Módulos -->
-    <p v-if="abierto" class="px-4 pb-2 pt-6 text-caption font-bold tracking-wider text-neutral-400">
+    <p v-if="abierto" class="px-4 pb-2 pt-4 text-label font-bold tracking-wider text-neutral-400">
       MÓDULOS DE SERVICIO
     </p>
 
     <nav
       class="flex min-h-0 w-full flex-1 flex-col gap-1 overflow-y-auto px-3 py-2"
-      :class="abierto ? '' : 'pt-6'"
+      :class="abierto ? '' : 'pt-3'"
     >
       <button
         v-for="item in visibleMenuItems"
         :key="item.key"
         type="button"
         :title="item.label"
-        class="flex items-center gap-3 rounded-xl py-2.5 text-left text-label transition-colors"
+        class="flex items-center gap-3 rounded-xl py-2.5 text-left text-body transition-colors"
         :class="[
           route.path === item.path
             ? 'bg-primary-50 text-primary-700'
@@ -206,13 +243,13 @@ onBeforeUnmount(limpiarTemporizadorSalida)
           />
         </span>
         <span v-if="abierto" class="min-w-0 flex-1 leading-tight">
-          <span class="block truncate text-label font-bold text-secondary-800">
+          <span class="block truncate text-body font-bold text-secondary-800">
             {{ nombreUsuario || 'Cargando…' }}
           </span>
-          <span v-if="rolUsuario" class="block truncate text-caption text-neutral-500">
+          <span v-if="rolUsuario" class="block truncate text-label text-neutral-500">
             {{ rolUsuario }}
           </span>
-          <span v-if="emailUsuario" class="block truncate text-caption text-neutral-400">
+          <span v-if="emailUsuario" class="block truncate text-label text-neutral-400">
             {{ emailUsuario }}
           </span>
         </span>

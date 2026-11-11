@@ -62,10 +62,18 @@ function claseAlineacion(col: CatalogColumn) {
 
 function valorCelda(row: CatalogRow, col: CatalogColumn) {
   const valor = row[col.key]
+
+  if (col.format) {
+    return col.format(valor, row)
+  }
+
   if (valor === null || valor === undefined || valor === '') {
     return col.emptyLabel ?? '—'
   }
-  return col.type === 'currency' ? formatCurrency(valor) : String(valor)
+
+  return col.type === 'currency'
+    ? formatCurrency(valor)
+    : String(valor)
 }
 
 const rangoMostrado = computed(() => {

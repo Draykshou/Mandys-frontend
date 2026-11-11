@@ -5,7 +5,7 @@
  */
 import { computed, ref, type Component } from 'vue'
 import { animate } from 'animejs'
-import { AlertCircle, CheckCircle, Trash2, RefreshCw, X } from 'lucide-vue-next'
+import { AlertCircle, CheckCircle, Trash2, RefreshCw, X, ArrowUp, ArrowDown } from 'lucide-vue-next'
 import type { ToastTipo } from '@/types/Toast'
 
 const props = withDefaults(
@@ -50,6 +50,16 @@ const ESTILOS: Record<ToastTipo, { icono: Component; caja: string; barra: string
     caja: 'border-amber-200 bg-amber-50 text-amber-900',
     barra: 'bg-amber-500',
   },
+  entrada: {
+    icono: ArrowUp,
+    caja: 'border-green-200 bg-green-50 text-green-900',
+    barra: 'bg-green-500',
+  },
+  salida: {
+    icono: ArrowDown,
+    caja: 'border-green-200 bg-green-50 text-green-900',
+    barra: 'border-green-200 bg-green-50 text-green-900',
+  }
 }
 
 const estilo = computed(() => ESTILOS[props.tipo])
