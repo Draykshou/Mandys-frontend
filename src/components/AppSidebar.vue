@@ -45,7 +45,7 @@ const menuItems = computed(() => [
     label: 'Inicio',
     icon: House,
     path: '/catalogs/home',
-    roles: ['Administrador', 'Gerente de Operaciones', 'Gerente Sucursal', 'Encargado de Almacen Central', 'Encargado de Almacen'],
+    roles: ['Administrador', 'Gerente de Operaciones', 'Gerente Sucursal', 'Encargado de Almacen Central', 'Encargado de Almacen', 'Cliente'],
   },
   {
     key: 'products',

@@ -76,7 +76,7 @@ const handleLogin = async () => {
           Por favor, ingresa tus credenciales para acceder al sistema de gestión de Mandy's POS.
         </p>
       </div>
-
+      
       <div
         v-if="error"
         class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 login-anim"
@@ -129,7 +129,7 @@ const handleLogin = async () => {
             <span class="text-[15px] text-stone-600">Recordar sesión en esta terminal</span>
           </label>
         </div>
-
+        
         <!-- Submit -->
         <div class="pt-4 login-anim">
           <button type="submit" class="w-full bg-[#c04a33] hover:bg-[#a83e29] text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md text-lg">
