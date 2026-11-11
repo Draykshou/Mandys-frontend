@@ -92,6 +92,7 @@ body,
   --color-neutral-800: #58554f;
   --color-neutral-900: #413e3a;
   --color-neutral-950: #36332f;
+  
 }
 
 /* Alias sueltos, por si el resto del código ya usa var(--primary) etc. */
@@ -153,6 +154,11 @@ body,
     background-color: var(--color-neutral-100);
   }
 
+  html {
+    /* 16px cuando la pantalla mide 1920px de ancho; escala en proporción */
+    font-size: clamp(13px, calc(100vw / 120), 22px);
+  }
+
   h1,
   h2,
   h3,
@@ -160,3 +166,4 @@ body,
     font-family: var(--font-headline);
   }
 }
+
