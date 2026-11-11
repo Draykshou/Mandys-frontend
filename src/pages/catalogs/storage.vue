@@ -25,6 +25,11 @@ import StorageUpdateModal from '@/components/storage/StorageUpdateModal.vue'
 import StorageHistoryTable from '@/components/storage/StorageHistoryTable.vue'
 import axios from 'axios'
 
+
+definePage({
+  meta: { roles: ["Administrador", "Gerente de Operaciones", "Encargado de Almacen Central", "Encargado de Almacen"] },
+});
+
 // toast
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
@@ -167,12 +172,12 @@ const loadBranches = async () => {
     branches.value = items;
 
     // Seleccionar la primera sucursal por defecto
-    if (branches.value.length > 0 && (rolUsuario.value === "Encargado de Almacen Central" || rolUsuario.value === "Administrador")) {
+    if (branches.value.length > 0 && (rolUsuario.value === "Administrador" || rolUsuario.value === "Gerente de Operaciones")) {
       selectedBranchId.value = branches.value[0].id;
       selectedBranchName.value = branches.value[0].name;
       //console.log('Cargar sucursal: ' + selectedBranchId.value)
     }
-    else if(branches.value.length > 0 && rolUsuario.value === "Encargado de Almacen"){
+    else if(branches.value.length > 0){
       selectedBranchId.value = auth.value.user?.branchId
       selectedBranchName.value = branches.value.find(b => b.id === selectedBranchId.value)?.name ?? '' 
       //console.log('Cargar sucursal con id: ' + selectedBranchId.value + '. Y nombre: ' + selectedBranchName.value)
@@ -187,7 +192,7 @@ const loadStorage = async (p = 1) => {
   try {
     const { orderBy, isSupply } = getStorageFilter()
 
-    if(rolUsuario.value === "Encargado de Almacen"){
+    if(rolUsuario.value !== "Administrador" && rolUsuario.value !== "Gerente de Operaciones"){
       storages.value = await getOneStorage(p, 20, filtro.busqueda, orderBy, isSupply)
     }
     else{
@@ -205,7 +210,7 @@ const loadStorage = async (p = 1) => {
 const loadStorageHistory = async (p = 1) => {
   //console.log("Estoy cargando solo historial")
   try {
-    if(rolUsuario.value === "Encargado de Almacen"){
+    if(rolUsuario.value !== "Administrador" && rolUsuario.value !== "Gerente de Operaciones"){
       storagesHistory.value = await getOneStorageHistory(p, 20, '', '-date')
     }
     else{
@@ -308,7 +313,7 @@ const enterOnShortCut = ref(false)
 const registrarEntrada = async (entrada: StorageIn) => {
   console.log(entrada)
   try{
-    if(rolUsuario.value === "Encargado de Almacen"){
+    if(rolUsuario.value !== "Administrador"){
       await inOneStorage(entrada)
     }
     else{
@@ -332,7 +337,7 @@ const abrirEntrada = (row?: Storage) => {
 const registrarSalida = async (salida: StorageOut) => {
   console.log(salida)
   try{
-    if(rolUsuario.value === "Encargado de Almacen"){
+    if(rolUsuario.value !== "Administrador"){
       await outOneStorage(salida)
     }
     else{
@@ -371,7 +376,7 @@ const UpdateStorage = async (newStockMinimum: number) => {
   if (!selectUpdateRow.value) return;
 
   try {
-    if(rolUsuario.value === "Encargado de Almacen"){
+    if(rolUsuario.value !== "Administrador"){
       await putOneStorage(selectUpdateRow.value.product.id, { minimumStock: newStockMinimum })
     }
     else{
@@ -466,6 +471,7 @@ onMounted( async () => {
 
         <storageTable
           v-if="!inHistoryTable"
+          :rol-usuario="rolUsuario"
           :rows="storages?.items ?? []"
           :total-registros="storages?.totalCount ?? 0"
           :pagina="page"

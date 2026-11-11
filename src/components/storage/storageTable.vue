@@ -25,6 +25,7 @@ const onEnter = (el: Element, done: () => void) => {
 }
 
 const props = defineProps<{
+  rolUsuario: string
   rows: Storage[]
   totalRegistros: number
   pagina: number
@@ -132,6 +133,7 @@ const rangoMostrado = computed(() => {
                 <div class="flex items-center justify-center gap-4">
                     {{ convertirStockVista(row.minimumStock, row.product.measureUnit) }}
                     <button
+                    v-if="props.rolUsuario !== 'Gerente de Operaciones'"
                     type="button"
                     class="action-button hover:bg-blue-100 hover:text-blue-700 active:bg-blue-200"
                     title="Editar"

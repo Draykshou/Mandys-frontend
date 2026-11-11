@@ -39,12 +39,12 @@ const emit = defineEmits<{
   <div class="mb-6 flex items-start justify-between">
     <div class="flex gap-8">
       <div>
-        <h2 v-if="rolUsuario === 'Encargado de Almacen'" class="text-title text-secondary-900">Gestion de almacen{{ branchWrite() }}</h2>
+        <h2 v-if="rolUsuario === 'Encargado de Almacen' || rolUsuario === 'Encargado de Almacen Central'" class="text-title text-secondary-900">Gestion de almacen{{ branchWrite() }}</h2>
         <h2 v-else class="text-title text-secondary-900">Gestion de almacen</h2>
         <p class="mt-1 text-body text-neutral-600">Gestiona las entradas y salidas del almacen</p>
       </div>
       <div 
-          v-if="rolUsuario === 'Encargado de Almacen Central' || rolUsuario === 'Administrador'"
+          v-if="rolUsuario === 'Gerente de Operaciones' || rolUsuario === 'Administrador'"
           class="mb-4 bg-neutral-50 p-4 rounded-xl w-100"
       >
           <label class="font-bold" for="branch">Sucursal: </label>
@@ -90,6 +90,7 @@ const emit = defineEmits<{
           Ver Almacen
       </button>
       <button 
+        v-if="rolUsuario !== 'Gerente de Operaciones'"
         type="button" 
         class="flex flex-row gap-1 items-center rounded-xl p-2 
         btn btn-primary bg-green-200 text-green-700 text-xl text-bold shadow-sm
@@ -100,6 +101,7 @@ const emit = defineEmits<{
           Generar entrada
       </button>
       <button 
+        v-if="rolUsuario !== 'Gerente de Operaciones'"
         type="button" 
         class="flex flex-row gap-1 items-center rounded-xl p-2 
         btn btn-primary bg-red-200 text-red-700 text-xl text-bold shadow-sm

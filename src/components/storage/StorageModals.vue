@@ -125,7 +125,7 @@ const loadMore = async () => {
   loading.value = true
   error.value = ''
 
-  if (props.rolUsuario === 'Encargado de Almacen') {
+  if (props.rolUsuario !== 'Administrador') {
     try {
       const res = await getOneStorage(
         page.value + 1,

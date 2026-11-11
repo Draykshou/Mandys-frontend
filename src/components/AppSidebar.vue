@@ -73,7 +73,7 @@ const menuItems = computed(() => [
     label: 'Almacén',
     icon: Warehouse,
     path: '/catalogs/storage',
-    roles: ['Administrador', 'Encargado de Almacen Central', 'Encargado de Almacen'],
+    roles: ['Administrador', 'Encargado de Almacen Central', 'Encargado de Almacen', 'Gerente de Operaciones'],
   },
   {
     key: 'branches',
