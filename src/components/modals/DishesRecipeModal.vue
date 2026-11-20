@@ -203,7 +203,7 @@ onMounted(loadMore)
           <input
             v-model="busqueda"
             type="text"
-            placeholder="Buscar producto"
+            placeholder="Buscar producto o insumo"
             aria-label="Buscar producto"
             class="min-w-0 flex-1 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-body focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600"
           />

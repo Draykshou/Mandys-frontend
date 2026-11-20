@@ -37,7 +37,7 @@ const changeDeleteModal = () => {
       class="w-full max-w-120 flex flex-col rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden m-8"
     >
       <div class="bg-red-500 text-neutral-50 text-2xl text-center font-bold p-2">
-        Eliminar Combo
+        Eliminar Cliente
       </div>
 
       <div class="bg-neutral-50 flex flex-col items-center text-center px-8 pt-4">

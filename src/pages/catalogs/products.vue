@@ -58,9 +58,9 @@ const productsColumn: CatalogoDef = {
       type: 'currency',
       format: (value, row) => {
         const unidades: Record<string, string> = {
-          Kilogramos: '/k',
-          Litros: '/l',
-          Unidades: '/u'
+          Kilogramos: '/ KG',
+          Litros: '/ L',
+          Unidades: '/ U'
         }
 
         return `${formatCurrency(Number(value))} ${unidades[String(row.measureUnit)] ?? ''}`

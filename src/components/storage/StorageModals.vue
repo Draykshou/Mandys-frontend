@@ -70,9 +70,9 @@ type Unidad = Storage['product']['measureUnit']
 
 // Cómo se muestran stock y cantidad (siempre en la unidad base).
 const abreviaturas: Record<Unidad, string> = {
-  Unidades: 'u',
-  Kilogramos: 'kg',
-  Litros: 'l',
+  Unidades: 'U',
+  Kilogramos: 'KG',
+  Litros: 'L',
 }
 
 // Cómo se captura el COSTO.
@@ -82,9 +82,9 @@ const abreviaturas: Record<Unidad, string> = {
 //   Mililitros: { etiqueta: 'L',  factor: 1000 },
 // El encabezado, los textos y el costPrice que se envía se ajustan solos.
 const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
-  Unidades: { etiqueta: 'u', factor: 1 },
-  Kilogramos: { etiqueta: 'kg', factor: 1 },
-  Litros: { etiqueta: 'l', factor: 1 },
+  Unidades: { etiqueta: 'U', factor: 1 },
+  Kilogramos: { etiqueta: 'KG', factor: 1 },
+  Litros: { etiqueta: 'L', factor: 1 },
 }
 
 const convertirStockVista = (stock: number, unidad: Unidad): string => {

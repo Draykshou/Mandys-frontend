@@ -156,7 +156,7 @@ const confirmDelete = () => {
 
         <!-- Encabezado -->
         <div class="bg-red-500 text-neutral-50 text-2xl text-center font-bold p-2">
-          Eliminar Platillo
+          Eliminar Sucursal
         </div>
 
         <!-- Contenido -->

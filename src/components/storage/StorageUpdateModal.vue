@@ -16,9 +16,9 @@ const emit = defineEmits<{
 type Unidad = string
 
 const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
-  Unidades: { etiqueta: 'u', factor: 1 },
-  Kilogramos: { etiqueta: 'kg', factor: 1 },
-  Litros: { etiqueta: 'l', factor: 1 },
+  Unidades: { etiqueta: 'U', factor: 1 },
+  Kilogramos: { etiqueta: 'KG', factor: 1 },
+  Litros: { etiqueta: 'L', factor: 1 },
 }
 
 const increaseUnit = (stock: number, unidad: Unidad): number => {

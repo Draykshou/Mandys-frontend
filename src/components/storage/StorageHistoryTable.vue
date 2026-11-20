@@ -101,9 +101,9 @@ const verProductos = (row: StorageHistory) => {
 type Unidad = Storage['product']['measureUnit']
 
 const CONVERSIONES: Record<Unidad, { etiqueta: string; factor: number }> = {
-    Unidades: { etiqueta: 'u', factor: 1 },
-    Kilogramos: { etiqueta: 'kg', factor: 1000 },
-    Litros: { etiqueta: 'l', factor: 1000 },
+    Unidades: { etiqueta: 'U', factor: 1 },
+    Kilogramos: { etiqueta: 'KG', factor: 1000 },
+    Litros: { etiqueta: 'L', factor: 1000 },
 }
 
 const rangoMostrado = computed(() => {
