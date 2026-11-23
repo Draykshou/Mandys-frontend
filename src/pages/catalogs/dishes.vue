@@ -8,12 +8,12 @@ import AppToast from '@/components/AppToast.vue'
 import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
 import CatalogTable from '@/components/CatalogTable.vue'
-import DishesModals from '@/components/modals/DishesModals.vue'
+import DishesModals from '@/components/dishes/DishesModals.vue'
 import { useToast } from '@/composables/useToast'
 import { useExportCatalog } from '@/composables/useExportCatalog'
 
 import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
-import type { CreateDish, Dish, Dishes, UpdateDish } from '@/types/DishesDtos'
+import type { CreateDish, Dish, Dishes, UpdateDish } from '@/types/catalogs/DishesDtos'
 
 import { postDish, putDish, deleteDish, getDishes } from '@/service/DishesService'
 

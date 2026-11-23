@@ -5,6 +5,7 @@ export interface Product {
     costPrice: number
     salePrice: number
     measureUnit: "Kilogramos" | "Litros" | "Unidades"
+    imageUrl: string | null
 }
 
 export interface CreateProduct{
@@ -17,7 +18,7 @@ export interface CreateProduct{
 export interface UpdateProduct{
     description: string
     isSupply: boolean
-    salePrice: number
+    salePrice: number | null
     measureUnit: string
 }
 

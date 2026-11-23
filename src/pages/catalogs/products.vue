@@ -1,312 +1,303 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted, computed } from 'vue'
+import axios from 'axios'
 
+// Componentes externos
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import AppToast from '@/components/AppToast.vue'
 import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
-import CatalogTable from '@/components/CatalogTable.vue'
+import ProductsTable from '@/components/products/ProductsTable.vue'
+import ProductsModals from '@/components/products/ProductsModals.vue'
+import ModalImg from '@/components/ModalImg.vue'
+
+// Servicios y tipos
+import useAuth from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 import { useExportCatalog } from '@/composables/useExportCatalog'
-import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
-import ProductsModals from '@/components/modals/ProductsModals.vue'
-import useAuth from '@/composables/useAuth'
+import { deleteProduct, getProducts, postProduct, putProduct, putProductImage } from '@/service/ProductsService'
+import { formatCurrency } from '@/utils/format'
+import type { Product, CreateProduct, UpdateProduct, Products } from '@/types/catalogs/ProductsDtos'
 
-import type { Product, CreateProduct, UpdateProduct, Products } from '@/types/ProductsDtos'
-import { deleteProduct, getProducts, postProduct, putProduct } from '@/service/ProductsService'
-import axios from 'axios'
+// posiblemente eliminar
+import type { CatalogColumn } from '@/types/CatalogColumns/catalog'
 
+// Acceso a la página (roles que pueden entrar)
 definePage({
   meta: { roles: ["Administrador", "Gerente de Operaciones", "Encargado de Almacen Central", "Encargado de Almacen"] },
 });
 
+// ---------------------------------------------------------------------------
+// Sesión y avisos
+// ---------------------------------------------------------------------------
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
-const { state: auth} = useAuth()
-const rolUsuario = computed(() => auth.value.user?.role ?? '')
+const { state: sesion } = useAuth()
+const rolUsuario = computed(() => sesion.value.user?.role ?? '')
 
-interface CatalogoDef {
+// El Gerente de Operaciones solo consulta: no agrega, edita ni elimina.
+const puedeModificar = computed(() => rolUsuario.value !== 'Gerente de Operaciones')
+
+// ---------------------------------------------------------------------------
+// Definición del catálogo
+// ---------------------------------------------------------------------------
+interface DefinicionCatalogo {
   titulo: string
   subtitulo: string
   textoBoton: string
   categorias: string[]
-  columns: CatalogColumn[]
+  columnasExcel: CatalogColumn[]
 }
 
-const products = ref<Products | null>(null)
-
-const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(value)
+const SUFIJO_UNIDAD: Record<string, string> = {
+  Kilogramos: '/ KG',
+  Litros: '/ L',
+  Unidades: '/ U',
 }
 
-const productsColumn: CatalogoDef = {
+const definicionProductos: DefinicionCatalogo = {
   titulo: 'Productos',
   subtitulo: 'Control y administración del inventario de productos de la sucursal.',
   textoBoton: 'Agregar Producto',
   categorias: ['Todos', 'Alfabetico A-Z', 'Alfabetico Z-A', 'Mayor precio', 'Menor precio', 'Es Insumo', 'No es Insumo'],
-  columns: [
+  columnasExcel: [
     { key: 'description', label: 'Descripción', type: 'text' },
     { key: 'isSupply', label: 'Insumo', type: 'boolean' },
-
     {
       key: 'costPrice',
       label: 'Precio de compra',
       type: 'currency',
-      format: (value, row) => {
-        const unidades: Record<string, string> = {
-          Kilogramos: '/ KG',
-          Litros: '/ L',
-          Unidades: '/ U'
-        }
-
-        return `${formatCurrency(Number(value))} ${unidades[String(row.measureUnit)] ?? ''}`
-      }
+      format: (valor, fila) =>
+        `${formatCurrency(Number(valor))} ${SUFIJO_UNIDAD[String(fila.measureUnit)] ?? ''}`,
     },
-
     {
       key: 'salePrice',
       label: 'Precio de venta',
       type: 'currency',
-      format: (value, row) => {
-        if (row.isSupply) return 'Sin precio'
-        return formatCurrency(Number(value))
-      }
+      format: (valor, fila) => (fila.isSupply ? 'Sin precio' : formatCurrency(Number(valor))),
     },
-
     { key: 'measureUnit', label: 'Unidad de medida', type: 'text' },
   ],
 }
 
-const page = ref(1)
-const totalPages = ref(1)
+// ---------------------------------------------------------------------------
+// Estado de la vista
+// ---------------------------------------------------------------------------
 
-// Filtro
+const productos = ref<Products | null>(null)
+const paginaActual = ref(1)
+const totalPaginas = ref(1)
+const imageVersion = ref(Date.now())
+
 const filtro = reactive({
   busqueda: '',
-  categoria: productsColumn.categorias[0],
+  categoria: definicionProductos.categorias[0],
 })
 
-
-function limpiarFiltro() {
-  filtro.busqueda = ''
-  filtro.categoria = productsColumn.categorias[0]
-}
-
-const search = async () => {
-  await loadProducts(1)
-}
-
-const getProductFilters = () => {
+// ---------------------------------------------------------------------------
+// Carga de datos
+// ---------------------------------------------------------------------------
+const obtenerFiltrosProductos = () => {
   let orderBy = ''
-  let isSupply: boolean | null = null
+  let IsSupply: boolean | null = null
 
   switch (filtro.categoria) {
     case 'Alfabetico A-Z':
       orderBy = 'description'
       break
-
     case 'Alfabetico Z-A':
       orderBy = '-description'
       break
-
     case 'Mayor precio':
       orderBy = '-salePrice'
       break
-
     case 'Menor precio':
       orderBy = 'salePrice'
       break
-
     case 'Es Insumo':
-      isSupply = true
+      IsSupply = true
       break
     case 'No es Insumo':
-      isSupply = false
+      IsSupply = false
       break
     default:
       orderBy = 'description'
       break
   }
 
-  return {
-    orderBy,
-    isSupply
-  }
+  return { orderBy, IsSupply }
 }
 
-const modalInsertEnable = ref(false)
+const cargarProductos = async (p = 1) => {
+  try {
+    const { orderBy, IsSupply } = obtenerFiltrosProductos()
+    productos.value = await getProducts(p, 20, filtro.busqueda, orderBy, IsSupply)
 
-const modalUpdateEnable = ref(false)
-const currentRow = ref<Product | null>(null)
-
-const modalDeleteEnable = ref(false)
-
-// CUD
-const insertRow = async (description: string, isSupply: boolean, salePrice: number, measureUnit: string) => {
-  const product : CreateProduct = {
-    description: description,
-    isSupply: isSupply,
-    salePrice: isSupply ? null : salePrice,
-    measureUnit: measureUnit
+    paginaActual.value = productos.value?.page ?? 1
+    totalPaginas.value = productos.value?.totalPages ?? 1 
+    } catch (err) {
+      console.error('No se pudieron cargar los productos:', err)
+    } 
   }
-  console.log("insert call: " + product.salePrice)
+
+// ---------------------------------------------------------------------------
+// Filtros, búsqueda y paginación
+// ---------------------------------------------------------------------------
+const buscar = async () => {
+  await cargarProductos(1)
+}
+
+const limpiarFiltro = () => {
+  filtro.busqueda = ''
+  filtro.categoria = definicionProductos.categorias[0]
+}
+
+const cambiarPagina = async (pagina: number) => {
+  await cargarProductos(pagina)
+}
+
+// ---------------------------------------------------------------------------
+// Agregar, editar y eliminar
+// ---------------------------------------------------------------------------
+
+const productoActual = ref<Product | null>(null)
+const modalInsertarVisible = ref(false)
+const modalEditarVisible = ref(false)
+const modalEliminarVisible = ref(false)
+
+const abrirModalEditar = (producto: Product) => {
+  productoActual.value = producto
+  console.log(producto)
+  modalEditarVisible.value = true
+}
+
+const abrirModalEliminar = (producto: Product) => {
+  productoActual.value = producto
+  modalEliminarVisible.value = true
+}
+
+const insertarProducto = async (descripcion: string, IsSupply: boolean, precioVenta: number, unidadMedida: string, imagen: File | null) => {
+  const producto: CreateProduct = {
+    description: descripcion,
+    isSupply: IsSupply,
+    salePrice: IsSupply ? null : precioVenta,
+    measureUnit: unidadMedida,
+  }
 
   try {
-    await postProduct(product)
-    modalInsertEnable.value = false
-    mostrarToast('Producto agregado correctamente.','exito')
-    await loadProducts()
+    const response = await postProduct(producto)
+
+     if (imagen && response.id) {
+      await putProductImage(response.id, imagen);
+    }
+
+    modalInsertarVisible.value = false
+    mostrarToast('Producto agregado correctamente.', 'exito')
+    await cargarProductos()
   } catch (err) {
-    console.error("No se pudo crear el producto:", err)
-    mostrarToast(obtenerMensajeError(err,'No se pudo crear el Producto.'),'error')
+    console.error('No se pudo crear el producto:', err)
+    mostrarToast(obtenerMensajeError(err, 'No se pudo crear el Producto.'), 'error')
   }
 }
 
-const loadRowInformation = (row: CatalogRow) => {
-  currentRow.value = {
-    id: Number(row.id),
-    description: String(row.description),
-    isSupply: Boolean(row.isSupply),
-    costPrice: Number(row.costprice),
-    salePrice: Number(row.salePrice),
-    measureUnit: row.measureUnit as "Kilogramos" | "Litros" | "Unidades",
+const actualizarProducto = async (descripcion: string, IsSupply: boolean, precioVenta: number, unidadMedida: string, imagen: File | null) => {
+  const producto: UpdateProduct = {
+    description: descripcion,
+    isSupply: IsSupply,
+    salePrice: IsSupply ? null : precioVenta,
+    measureUnit: unidadMedida,
   }
-}
 
-const openModalUpdate = (row: CatalogRow) => {
-  loadRowInformation(row)
-  modalUpdateEnable.value = true
-}
-
-const openModalDelete = (row: CatalogRow) => {
-  loadRowInformation(row)
-  modalDeleteEnable.value = true
-}
-
-
-const updateRow = async (description: string, isSupply: boolean, salePrice: number, measureUnit: string) => {
-  const product : UpdateProduct = {
-    description: description,
-    isSupply: isSupply,
-    salePrice: salePrice,
-    measureUnit: measureUnit
-  }
-  console.log("update call")
   try {
-    await putProduct(currentRow.value?.id as number, product)
-    modalUpdateEnable.value = false
-    mostrarToast('Producto actualizado correctamente.','actualizar')
-    await loadProducts()
-    
+    const response = await putProduct(productoActual.value?.id as number, producto)
+
+     if (imagen && response.id) {
+      await putProductImage(response.id, imagen);
+    }
+    imageVersion.value = Date.now()
+
+    modalEditarVisible.value = false
+    mostrarToast('Producto actualizado correctamente.', 'actualizar')
+    await cargarProductos()
   } catch (err) {
-    console.error("No se pudo actualizar el producto:", err)
-    mostrarToast(obtenerMensajeError(err,'No se pudo actualizar el Producto.'),'error')
+    console.error('No se pudo actualizar el producto:', err)
+    mostrarToast(obtenerMensajeError(err, 'No se pudo actualizar el Producto.'), 'error')
   }
 }
 
-const deleteRow = async () => {
+const eliminarProducto = async () => {
   try {
-    await deleteProduct(currentRow.value?.id as number)
-    modalDeleteEnable.value = false
-    mostrarToast('Producto eliminado correctamente.','eliminar')
-    await loadProducts()
-    
+    await deleteProduct(productoActual.value?.id as number)
+    modalEliminarVisible.value = false
+    mostrarToast('Producto eliminado correctamente.', 'eliminar')
+    await cargarProductos()
   } catch (err) {
-    console.error("No se pudo crear el producto:", err)
-    modalDeleteEnable.value = false
-    mostrarToast(obtenerMensajeError(err,'No se pudo eliminar el Producto.'),'error')
+    console.error('No se pudo eliminar el producto:', err)
+    modalEliminarVisible.value = false
+    mostrarToast(obtenerMensajeError(err, 'No se pudo eliminar el Producto.'), 'error')
   }
 }
 
-const changePage = async (page: number) => {
-  await loadProducts(page)
+// Imagenes
+const modalImg = ref(false)
+const imgActual = ref<string | null>()
+
+const abrirModalImg = (img: string | null) => {
+  imgActual.value = img
+  modalImg.value = true
 }
 
+// ---------------------------------------------------------------------------
+// Exportación a Excel
+// ---------------------------------------------------------------------------
 /** Tamaño de página para traer el catálogo completo antes de generar el archivo. */
-const PAGE_SIZE_EXPORT = 100
 
 /**
- * Productos es el único catálogo cuya vista sí pagina en servidor, así que
- * recorre todas las páginas con `getProducts` para que el archivo no se corte
- * en la primera. Se repiten el orden y el filtro de insumo que usa la tabla.
+ * Recorre todas las páginas con `getProducts` para que el archivo no se corte
+ * en la primera. Se trae completo (sin filtro de insumo) y ordenado por descripción.
  */
 const cargarCatalogo = async () => {
-  const primera = await getProducts(1, PAGE_SIZE_EXPORT, '', 'description', null)
+  const primera = await getProducts(1, 20, '', 'description', null)
   const items = [...primera.items]
+
   for (let pagina = 2; pagina <= primera.totalPages; pagina++) {
-    const siguiente = await getProducts(pagina, PAGE_SIZE_EXPORT, '', 'description', null)
-    // Si una página viene vacía no hay nada más que traer; seguir insistiendo
-    // solo gastaría requests.
+    const siguiente = await getProducts(pagina, 20, '', 'description', null)
+    // Si una página viene vacía no hay nada más que traer.
     if (siguiente.items.length === 0) break
     items.push(...siguiente.items)
   }
+
   return items
 }
 
 const { exportando, exportar } = useExportCatalog()
 
-const exportTable = () => {
+const exportarTabla = () => {
   void exportar(
     'excel',
     {
-      columns: productsColumn.columns,
-      titulo: productsColumn.titulo,
+      columns: definicionProductos.columnasExcel,
+      titulo: definicionProductos.titulo,
     },
     cargarCatalogo,
   )
 }
 
-type Unidad = Storage['product']['measureUnit']
-
-const COSTO_POR: Record<Unidad, { etiqueta: string; factor: number }> = {
-  Unidades: { etiqueta: 'u', factor: 1 },
-  Kilogramos: { etiqueta: 'kg', factor: 1 },
-  Litros: { etiqueta: 'l', factor: 1 },
-}
-const convertirCostoVista = (costo: number, unidad: Unidad): number => {
-  return costo * COSTO_POR[unidad].factor
-}
-
-const loadProducts = async (p = 1) => {
-  try{
-    const { orderBy, isSupply } = getProductFilters()
-    
-    products.value = await getProducts(p, 20, filtro.busqueda, orderBy, isSupply)
-    console.log('Productos cargados:', products.value)
-    page.value = products.value.page
-    totalPages.value = products.value.totalPages
-    products.value = {
-      ...products.value,
-      items: products.value.items.map(product => ({
-        ...product,
-        costPrice: convertirCostoVista(
-          product.costPrice,
-          product.measureUnit
-        )
-      }))
+// ---------------------------------------------------------------------------
+// Utilidades
+// ---------------------------------------------------------------------------
+const obtenerMensajeError = (err: unknown, mensajePorDefecto: string) => {
+  if (axios.isAxiosError(err)) {
+    const mensaje = err.response?.data?.message
+    if (typeof mensaje === 'string' && mensaje.trim() !== '') {
+      return mensaje
     }
   }
-  catch(err){
-    console.error('No se pudieron cargar los productos:', err)
-  }
+  return mensajePorDefecto
 }
 
-const obtenerMensajeError=(err:unknown,mensajeDefault:string)=>{
-    if(axios.isAxiosError(err)){
-        const mensaje=err.response?.data?.message
-        if(typeof mensaje==='string'&&mensaje.trim()!==''){
-            return mensaje
-        }
-    }
-    return mensajeDefault
-}
-
-onMounted(loadProducts)
-
+onMounted(() => cargarProductos())
 </script>
 
 <template>
@@ -318,66 +309,74 @@ onMounted(loadProducts)
 
       <main class="flex-1 overflow-y-auto px-8 py-8">
         <CatalogHeader
-          :can-insert="rolUsuario === 'Gerente de Operaciones' ? false : true"
-          :titulo="productsColumn.titulo"
-          :subtitulo="productsColumn.subtitulo"
-          :texto-boton="productsColumn.textoBoton"
-          @agregar="modalInsertEnable = true"
+          :can-insert="puedeModificar"
+          :titulo="definicionProductos.titulo"
+          :subtitulo="definicionProductos.subtitulo"
+          :texto-boton="definicionProductos.textoBoton"
+          @agregar="modalInsertarVisible = true"
         />
 
         <CatalogFilter
           v-model:busqueda="filtro.busqueda"
           v-model:categoria="filtro.categoria"
-          :categorias="productsColumn.categorias"
-          @buscar="search"
+          :categorias="definicionProductos.categorias"
+          @buscar="buscar"
           @limpiar="limpiarFiltro"
         />
 
-        <CatalogTable
-          :cant-action="rolUsuario === 'Gerente de Operaciones' ? false : true"
-          :titulo="productsColumn.titulo"
-          :columns="productsColumn.columns"
-          :rows="products?.items ?? []"
-          :total-registros="products?.totalCount ?? 0"
-          :pagina="page"
-          :total-paginas="totalPages"
-          formato-export="excel"
+        <ProductsTable
+          :productos="productos?.items ?? []"
+          :total-registros="productos?.totalCount ?? 0"
+          :pagina="paginaActual"
+          :total-paginas="totalPaginas"
+          :tamano-pagina="20"
+          :mostrar-acciones="puedeModificar"
           :exportando="exportando"
-          @editar="openModalUpdate"
-          @eliminar="openModalDelete"
-          @exportar="exportTable"
-          @cambiar-pagina="changePage"
+          @editar="abrirModalEditar"
+          @eliminar="abrirModalEliminar"
+          @ver-imagen="abrirModalImg"
+          @exportar="exportarTabla"
+          @cambiar-pagina="cambiarPagina"
         />
 
         <ProductsModals
-          v-if="modalInsertEnable"
+          v-if="modalInsertarVisible"
           :is-insert="true"
           :modal-title="'Crear producto'"
           :modal-subtitle="'Ingrese los datos del producto'"
-          @close="modalInsertEnable = false"
-          @insert="insertRow"
+          @close="modalInsertarVisible = false"
+          @insert="insertarProducto"
         />
 
         <ProductsModals
-          v-if="modalUpdateEnable"
+          v-if="modalEditarVisible"
           :modal-title="'Modificar producto'"
           :modal-subtitle="'cambie los datos del producto'"
-          @close="modalUpdateEnable = false"
-          @update="updateRow"
-          :description="currentRow?.description"
-          :is-supply="currentRow?.isSupply"
-          :cost-price ="currentRow?.costPrice"
-          :sale-price="currentRow?.salePrice"
-          :measure-unit="currentRow?.measureUnit"
+          :description="productoActual?.description"
+          :is-supply="productoActual?.isSupply"
+          :cost-price="productoActual?.costPrice"
+          :sale-price="productoActual?.salePrice"
+          :measure-unit="productoActual?.measureUnit"
+          :image-url="productoActual?.imageUrl"
+          @close="modalEditarVisible = false"
+          @update="actualizarProducto"
         />
 
         <ProductsModals
-          v-if="modalDeleteEnable === true"
+          v-if="modalEliminarVisible"
           :is-delete="true"
-          @close="modalDeleteEnable = false"
-          @delete="deleteRow"
-          :description="currentRow?.description"
+          :description="productoActual?.description"
+          @close="modalEliminarVisible = false"
+          @delete="eliminarProducto"
         />
+
+        <ModalImg
+          v-if="modalImg"
+          :image="imgActual ?? null"
+          @close="modalImg = false"
+        >
+
+        </ModalImg>
 
         <AppToast
           :visible="toast.visible"

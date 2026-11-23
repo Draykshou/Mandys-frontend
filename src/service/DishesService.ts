@@ -1,5 +1,5 @@
 import { api } from "@/lib/api-client"
-import type { CreateDish, Dish, Dishes, UpdateDish } from "@/types/DishesDtos"
+import type { CreateDish, Dish, Dishes, UpdateDish } from "@/types/catalogs/DishesDtos"
 
 export async function getDishes(
     page = 1,

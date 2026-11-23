@@ -2,7 +2,7 @@
 
 import { ref, computed } from 'vue'
 import { DollarSign, OctagonAlert, FileText, X } from 'lucide-vue-next'
-import type { Dish , Recipe, CreateDish, UpdateDish } from '@/types/DishesDtos'
+import type { Dish , Recipe, CreateDish, UpdateDish } from '@/types/catalogs/DishesDtos'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
 import DishesRecipeModal from '@/components/modals/DishesRecipeModal.vue'
 
