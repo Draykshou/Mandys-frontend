@@ -1,10 +1,11 @@
-import type { Dish } from '@/types/DishesDtos'
-import type { Product } from '@/types/ProductsDtos'
+import type { Dish } from '@/types/catalogs/DishesDtos'
+import type { Product } from '@/types/catalogs/ProductsDtos'
 
 export interface Combo {
     id: number
     name: string
     price: number
+    costPrice: number
     dishes: {
         dish: Dish
         quantity: number
@@ -13,6 +14,7 @@ export interface Combo {
         product: Product
         quantity: number
     }[]
+    imageUrl: string | null
 }
 
 export interface CreateCombo {

@@ -1,5 +1,5 @@
 import { api } from "@/lib/api-client"
-import type { Combo, Combos, CreateCombo, UpdateCombo } from "@/types/CombosDtos"
+import type { Combo, Combos, CreateCombo, UpdateCombo } from "@/types/catalogs/CombosDtos"
 
 export async function getCombos(
     page = 1,

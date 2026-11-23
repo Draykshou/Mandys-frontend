@@ -2,14 +2,14 @@
 
 import { ref, computed } from 'vue'
 import { DollarSign, OctagonAlert, FileText, X } from 'lucide-vue-next'
-import type { Dish , Recipe, CreateDish, UpdateDish } from '@/types/catalogs/DishesDtos'
+import type { Dish, Recipe, CreateDish, UpdateDish } from '@/types/catalogs/DishesDtos'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
 import DishesRecipeModal from '@/components/modals/DishesRecipeModal.vue'
 
 const emit = defineEmits<{
   close: []
-  insert: [string, number, CreateDish['recipe']]
-  update: [string, number, UpdateDish['recipe']]
+  insert: [string, number, CreateDish['recipe'], File | null]
+  update: [string, number, UpdateDish['recipe'], File | null]
   delete: [string]
   action: []
 }>()
@@ -32,15 +32,41 @@ const props = withDefaults(
   }
 )
 
-const name=ref(props.dish?.name??'')
-const price=ref<number|null>(props.dish?.price??null)
-const recipe=ref<Recipe[]>(props.dish?.recipe?[...props.dish.recipe]:[])
+const name = ref(props.dish?.name ?? '')
+const price = ref<number | null>(props.dish?.price ?? null)
+const recipe = ref<Recipe[]>(props.dish?.recipe ? [...props.dish.recipe] : [])
 
 
 const reason = ref('')
 const recipeEnable = ref(false)
 const firstDeleteModel = ref(props.isDelete ?? '')
 const reasonModalEnable = ref(false)
+
+// Imagen
+const imagePreview = ref<string | null>(props.dish?.imageUrl ?? null);
+const fileInput = ref<HTMLInputElement | null>(null);
+const selectedImage = ref<File | null>(null);
+
+
+const handleImageChange = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+
+  if (!file) return;
+
+  selectedImage.value = file;
+
+  // Liberar URL anterior si era una vista previa local
+  if (imagePreview.value?.startsWith('blob:')) {
+    URL.revokeObjectURL(imagePreview.value);
+  }
+
+  imagePreview.value = URL.createObjectURL(file);
+}
+
+const openFileSelector = () => {
+  fileInput.value?.click();
+}
 
 const validate = computed(() => {
   return (
@@ -74,19 +100,19 @@ const changeDeleteModal = () => {
   firstDeleteModel.value = false
 }
 
-const save=()=>{
-    if(price.value===null)return
-    const recipeRequest=recipe.value.map(item=>({
-        productId:item.product.id,
-        quantity:item.quantity
-    }))
-    if(props.isInsert){
-        console.log('Insertando platillo:', name.value, price.value, recipeRequest, fabricationCost.value)
-        emit('insert', name.value, price.value, recipeRequest)
-    }else{
-        console.log('Actualizando:', name.value, price.value, recipeRequest, fabricationCost.value)
-        emit('update', name.value, price.value, recipeRequest)
-    }
+const save = () => {
+  if (price.value === null) return
+  const recipeRequest = recipe.value.map(item => ({
+    productId: item.product.id,
+    quantity: item.quantity
+  }))
+  if (props.isInsert) {
+    console.log('Insertando platillo:', name.value, price.value, recipeRequest, fabricationCost.value)
+    emit('insert', name.value, price.value, recipeRequest, selectedImage.value)
+  } else {
+    console.log('Actualizando:', name.value, price.value, recipeRequest, fabricationCost.value)
+    emit('update', name.value, price.value, recipeRequest, selectedImage.value)
+  }
 }
 
 const confirmDelete = () => {
@@ -144,17 +170,13 @@ const exportarPdf = async () => {
 <template>
 
   <!-- Fondo -->
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4"
-    style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"
-    @click.self="cerrarPorFondo"
-  >
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);" @click.self="cerrarPorFondo">
 
     <!-- Modal de insertar / editar -->
-    <div
-      v-if="!isDelete && !isAction"
-      v-show="!recipeEnable"
-      class="flex flex-col rounded-2xl shadow-2xl w-full max-w-xl bg-neutral-50 overflow-hidden" style="max-height: 92vh;">
+    <div v-if="!isDelete && !isAction" v-show="!recipeEnable"
+      class="flex flex-col rounded-2xl shadow-2xl w-full max-w-xl bg-neutral-50 overflow-hidden"
+      style="max-height: 92vh;">
       <!-- Encabezado del modal-->
       <div class="border-b border-neutral-200 p-4">
         <h1 class="text-secondary-800 text-2xl font-bold">
@@ -170,23 +192,15 @@ const exportarPdf = async () => {
         <!-- Nombre del platillo -->
         <div class="px-8 pt-4">
 
-          <label
-            class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5"
-          >
+          <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
             Nombre del platillo
             <span class="text-red-500">*</span>
           </label>
 
-          <input
-            v-model="name"
-            type="text"
-            maxlength="50"
-            placeholder="Ej. Tacos de Rib Eye con Tuétano"
-            class="w-full px-4 py-3 border rounded-xl text-sm
+          <input v-model="name" type="text" maxlength="50" placeholder="Ej. Tacos de Rib Eye con Tuétano" class="w-full px-4 py-3 border rounded-xl text-sm
                    bg-neutral-100 text-neutral-800
                    placeholder-neutral-300 font-medium
-                   transition-all focus:outline-none focus:ring-1"
-          />
+                   transition-all focus:outline-none focus:ring-1" />
 
         </div>
 
@@ -194,137 +208,121 @@ const exportarPdf = async () => {
         <div class="flex flex-wrap gap-4 px-8 pt-4">
 
           <div class="min-w-44 max-w-60 flex-1">
-            <label
-              class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5"
-            >
+            <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
               Precio
               <span class="text-red-500">*</span>
             </label>
             <div class="relative">
-              <div
-                class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
-              >
-                <DollarSign
-                  :size="16"
-                  class="text-neutral-800"
-                />
+              <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <DollarSign :size="16" class="text-neutral-800" />
               </div>
-              <input
-                v-model="price"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                class="w-full pl-10 pr-4 py-3 border rounded-xl
+              <input v-model="price" type="number" step="0.01" min="0" placeholder="0.00" class="w-full pl-10 pr-4 py-3 border rounded-xl
                        text-sm bg-neutral-100 text-neutral-800
                        font-medium transition-all
-                       focus:outline-none focus:ring-1"
-              />
+                       focus:outline-none focus:ring-1" />
             </div>
           </div>
 
           <!-- Solo informativo: se calcula con la receta -->
           <div class="min-w-44 max-w-60 flex-1">
-            <label
-              class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5"
-            >
+            <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
               Precio de elaboración
             </label>
             <div class="relative">
-              <div
-                class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"
-              >
-                <DollarSign
-                  :size="16"
-                  class="text-neutral-800"
-                />
+              <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <DollarSign :size="16" class="text-neutral-800" />
               </div>
-              <input
-                type="text"
-                readonly
-                tabindex="-1"
-                :value="fabricationCost.toFixed(2)"
-                class="w-full pl-10 pr-4 py-3 border rounded-xl
+              <input type="text" readonly tabindex="-1" :value="fabricationCost.toFixed(2)" class="w-full pl-10 pr-4 py-3 border rounded-xl
                        text-sm bg-neutral-200 text-neutral-700
                        font-medium cursor-default
-                       focus:outline-none"
-              />
+                       focus:outline-none" />
             </div>
           </div>
 
         </div>
 
+        <div class="flex flex-col px-8 py-4">
+          <label class="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
+            Imagen<span class="text-red-500">*</span>
+          </label>
+
+          <div class="flex items-center gap-4">
+
+            <!-- Input oculto -->
+            <input ref="fileInput" type="file" accept="image/png, image/jpeg, image/webp" class="hidden"
+              @change="handleImageChange" />
+
+            <!-- Botón para seleccionar -->
+            <button type="button" @click="openFileSelector" class="px-4 py-3 border rounded-xl text-sm
+             bg-neutral-100 text-neutral-800 font-medium
+             hover:bg-neutral-200 transition-all">
+              {{ imagePreview ? 'Cambiar imagen' : 'Seleccionar imagen' }}
+            </button>
+
+            <!-- Vista previa -->
+            <div v-if="imagePreview" class="h-16 w-16 shrink-0 rounded-xl overflow-hidden border border-neutral-300">
+              <img :src="imagePreview" alt="Vista previa del producto" class="h-full w-full object-cover" />
+            </div>
+
+            <span v-else class="text-xs text-neutral-400">
+              Ninguna imagen seleccionada
+            </span>
+
+          </div>
+        </div>
+
         <!-- Receta -->
         <div class="px-8 pt-6 pb-8 flex flex-col items-center">
-          <label class="block text-xs text-center font-bold text-neutral-600 uppercase tracking-wider mb-1.5">Pulsa el boton para ver o editar la receta</label>
-          <button
-          type="button"
-          class="bg-primary-600 hover:bg-primary-700
+          <label class="block text-xs text-center font-bold text-neutral-600 uppercase tracking-wider mb-1.5">Pulsa el
+            boton para ver o editar la receta</label>
+          <button type="button" class="bg-primary-600 hover:bg-primary-700
                  active:bg-primary-800 text-neutral-50
                  py-3 px-7 rounded-xl shadow-xl
                  disabled:bg-neutral-300
                  disabled:text-neutral-500
                  disabled:cursor-not-allowed
-                 disabled:shadow-none"
-          @click="recipeEnable = true">
+                 disabled:shadow-none" @click="recipeEnable = true">
             Receta
           </button>
         </div>
       </div>
 
       <!-- Botones -->
-      <div
-        class="flex justify-between py-4 px-10
-               bg-neutral-100 border-t border-neutral-200"
-      >
-        <button
-          type="button"
-          class="bg-neutral-50 hover:bg-neutral-200
+      <div class="flex justify-between py-4 px-10
+               bg-neutral-100 border-t border-neutral-200">
+        <button type="button" class="bg-neutral-50 hover:bg-neutral-200
                  active:bg-neutral-300 border border-neutral-200
-                 text-secondary-700 py-3 px-7 rounded-xl shadow-xl"
-          @click="emit('close')"
-        >
+                 text-secondary-700 py-3 px-7 rounded-xl shadow-xl" @click="emit('close')">
           Cancelar
         </button>
-        <button
-          type="button"
-          :disabled="!validate"
-          class="bg-primary-600 hover:bg-primary-700
+        <button type="button" :disabled="!validate" class="bg-primary-600 hover:bg-primary-700
                  active:bg-primary-800 text-neutral-50
                  py-3 px-7 rounded-xl shadow-xl
                  disabled:bg-neutral-300
                  disabled:text-neutral-500
                  disabled:cursor-not-allowed
-                 disabled:shadow-none"
-          @click="save"
-          >
+                 disabled:shadow-none" @click="save">
           Guardar
         </button>
       </div>
     </div>
 
     <!-- Editor de receta (agregar / quitar productos) -->
-    <DishesRecipeModal
-      v-if="recipeEnable && !isAction"
-      :recipe="recipe"
-      @close="recipeEnable = false"
-      @confirm="aplicarReceta"
-    />
+    <DishesRecipeModal v-if="recipeEnable && !isAction" :recipe="recipe" @close="recipeEnable = false"
+      @confirm="aplicarReceta" />
 
     <!-- Ver receta (solo lectura) -->
-    <div v-if="isAction" class="flex flex-col w-full h-full max-h-150 max-w-2xl rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden ml-8">
+    <div v-if="isAction"
+      class="flex flex-col w-full h-full max-h-150 max-w-2xl rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden ml-8">
       <div class="flex items-start justify-between border-b border-neutral-200 p-4 shrink-0">
         <div>
           <h2 class="text-secondary-800 text-2xl font-bold">Receta</h2>
           <p class="text-neutral-700">Productos utilizados en el platillo</p>
         </div>
 
-        <button
-          type="button"
-          aria-label="Cerrar modal"
+        <button type="button" aria-label="Cerrar modal"
           class="ml-4 shrink-0 rounded-lg p-1 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-secondary-800"
-          @click="emit('close')"
-        >
+          @click="emit('close')">
           <X :size="22" />
         </button>
       </div>
@@ -341,11 +339,11 @@ const exportarPdf = async () => {
               </thead>
               <tbody>
                 <tr v-for="item in recipe" :key="item.product.id" class="border-t border-neutral-200">
-                  <td class="px-4 py-3">{{item.product.description}}</td>
-                  <td class="px-4 py-3 text-center">{{item.quantity}}</td>
-                  <td class="px-4 py-3">{{item.product.measureUnit}}</td>
+                  <td class="px-4 py-3">{{ item.product.description }}</td>
+                  <td class="px-4 py-3 text-center">{{ item.quantity }}</td>
+                  <td class="px-4 py-3">{{ item.product.measureUnit }}</td>
                 </tr>
-                <tr v-if="recipe.length===0">
+                <tr v-if="recipe.length === 0">
                   <td colspan="3" class="px-4 py-8 text-center text-neutral-500">No hay productos en la receta.</td>
                 </tr>
               </tbody>
@@ -355,23 +353,17 @@ const exportarPdf = async () => {
       </div>
 
       <div class="p-6 pt-0 shrink-0 flex justify-center">
-        <button
-          type="button"
-          class="w-full max-w-50 bg-primary-600 hover:bg-primary-500 active:bg-primary-400 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed
-          flex flex-row gap-2 justify-center"
-          @click="exportarPdf"
-        >
-          <FileText :size="24" class=" text-neutral-50"/>
+        <button type="button" class="w-full max-w-50 bg-primary-600 hover:bg-primary-500 active:bg-primary-400 text-white py-3 rounded-xl disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed
+          flex flex-row gap-2 justify-center" @click="exportarPdf">
+          <FileText :size="24" class=" text-neutral-50" />
           Exportar PDF
         </button>
       </div>
     </div>
 
     <!-- Modal de eliminar -->
-    <div
-      v-if="firstDeleteModel"
-      class="w-full max-w-120 flex flex-col rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden m-8"
-    >
+    <div v-if="firstDeleteModel"
+      class="w-full max-w-120 flex flex-col rounded-2xl shadow-2xl bg-neutral-50 overflow-hidden m-8">
 
       <!-- Encabezado -->
       <div class="bg-red-500 text-neutral-50 text-2xl text-center font-bold p-2">
@@ -380,7 +372,7 @@ const exportarPdf = async () => {
 
       <!-- Contenido -->
       <div class="bg-neutral-50 flex flex-col items-center text-center px-8 pt-4">
-        <OctagonAlert :size="80" class="text-red-500"/>
+        <OctagonAlert :size="80" class="text-red-500" />
         <h2 class="text-red-500 font-bold text-xl pt-4">
           ATENCIÓN
         </h2>
@@ -394,37 +386,24 @@ const exportarPdf = async () => {
         </p>
       </div>
       <!-- Botones -->
-      <div
-        class="bg-neutral-50 flex justify-between px-8 pt-4 pb-4">
-        <button
-          type="button"
-          class="bg-neutral-50 hover:bg-neutral-200
+      <div class="bg-neutral-50 flex justify-between px-8 pt-4 pb-4">
+        <button type="button" class="bg-neutral-50 hover:bg-neutral-200
                  border hover:border-primary-600
                  active:bg-neutral-300 border-neutral-200
                  text-primary-600 py-3 px-7
-                 rounded-xl shadow-xl"
-          @click="emit('close')"
-        >
+                 rounded-xl shadow-xl" @click="emit('close')">
           Cancelar
         </button>
 
-        <button
-          type="button"
-          class="bg-red-500 hover:bg-red-600
+        <button type="button" class="bg-red-500 hover:bg-red-600
                  active:bg-red-700 border-neutral-200
                  text-neutral-50 py-3 px-7
-                 rounded-xl shadow-xl"
-          @click="changeDeleteModal"
-        >
+                 rounded-xl shadow-xl" @click="changeDeleteModal">
           Confirmar
         </button>
       </div>
     </div>
 
-    <DeleteModal
-      v-if="reasonModalEnable"
-      @cancelar="emit('close')"
-      @confirmar="confirmDelete"
-    />
+    <DeleteModal v-if="reasonModalEnable" @cancelar="emit('close')" @confirmar="confirmDelete" />
   </div>
 </template>

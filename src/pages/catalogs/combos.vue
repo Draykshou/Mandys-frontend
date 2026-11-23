@@ -1,75 +1,84 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
 import axios from 'axios'
+
+// Componentes externos
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import AppToast from '@/components/AppToast.vue'
 import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
-import CatalogTable from '@/components/CatalogTable.vue'
-import CombosModals from '@/components/modals/CombosModals.vue'
+import CombosTable from '@/components/combos/CombosTable.vue'
+import CombosModals from '@/components/combos/CombosModals.vue'
+import ModalImg from '@/components/ModalImg.vue'
+
+// Servicios y tipos
 import { useToast } from '@/composables/useToast'
 import { useExportCatalog } from '@/composables/useExportCatalog'
-import type { CatalogColumn, CatalogRow } from '@/types/CatalogColumns/catalog'
-import type { Combo, Combos, CreateCombo, UpdateCombo } from '@/types/CombosDtos'
 import { postCombo, putCombo, deleteCombo, getCombos } from '@/service/CombosService'
+import type { Combo, Combos, CreateCombo, UpdateCombo } from '@/types/catalogs/CombosDtos'
 
+// posiblemente eliminar
+import type { CatalogColumn } from '@/types/CatalogColumns/catalog'
+
+// ---------------------------------------------------------------------------
+// Avisos
+// ---------------------------------------------------------------------------
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
-interface CatalogoDef {
+// ---------------------------------------------------------------------------
+// Definición del catálogo
+// ---------------------------------------------------------------------------
+interface DefinicionCatalogo {
   titulo: string
   subtitulo: string
   textoBoton: string
   categorias: string[]
-  columns: CatalogColumn[]
+  columnasExcel: CatalogColumn[]
 }
 
-const combos = ref<Combos | null>(null)
-
-const CombosColumn: CatalogoDef = {
+const definicionCombos: DefinicionCatalogo = {
   titulo: 'Combos',
   subtitulo: 'Gestión de los combos del restaurante',
   textoBoton: 'Agregar Combo',
   categorias: ['Alfabetico A-Z', 'Alfabetico Z-A', 'Mayor precio', 'Menor precio'],
-  columns: [
+  columnasExcel: [
     { key: 'name', label: 'Nombre', type: 'text' },
     { key: 'price', label: 'Precio', type: 'currency' },
     { key: 'dishes', label: 'Contenido', type: 'button' },
   ],
 }
 
-const page = ref(1)
-const totalPages = ref(1)
+// ---------------------------------------------------------------------------
+// Estado de la vista
+// ---------------------------------------------------------------------------
+const REGISTROS_POR_PAGINA = 5
+
+const combos = ref<Combos | null>(null)
+const paginaActual = ref(1)
+const totalPaginas = ref(1)
 
 const filtro = reactive({
   busqueda: '',
-  categoria: CombosColumn.categorias[0],
+  categoria: definicionCombos.categorias[0],
 })
 
-function cleanFilter() {
-  filtro.busqueda = ''
-  filtro.categoria = CombosColumn.categorias[0]
-}
-
-const search = async () => {
-  await loadCombos(1)
-}
-
-const getProductFilters = () => {
+// ---------------------------------------------------------------------------
+// Carga de datos
+// ---------------------------------------------------------------------------
+const obtenerFiltrosCombos = () => {
   let orderBy = ''
+
   switch (filtro.categoria) {
     case 'Alfabetico A-Z':
       orderBy = 'name'
       break
-
     case 'Alfabetico Z-A':
       orderBy = '-name'
       break
-
     case 'Mayor precio':
       orderBy = '-price'
       break
-
     case 'Menor precio':
       orderBy = 'price'
       break
@@ -78,163 +87,186 @@ const getProductFilters = () => {
       break
   }
 
-  return {
-    orderBy
+  return { orderBy }
+}
+
+const cargarCombos = async (pagina = 1) => {
+  try {
+    const { orderBy } = obtenerFiltrosCombos()
+    const respuesta = await getCombos(pagina, REGISTROS_POR_PAGINA, filtro.busqueda, orderBy)
+
+    combos.value = respuesta
+    paginaActual.value = respuesta.page
+    totalPaginas.value = respuesta.totalPages
+  } catch (err) {
+    console.error('No se pudieron cargar los combos:', err)
   }
 }
 
-const modalInsertEnable = ref(false)
-const modalUpdateEnable = ref(false)
-const modalDeleteEnable = ref(false)
-const modalActionEnable = ref(false)
+// ---------------------------------------------------------------------------
+// Filtros, búsqueda y paginación
+// ---------------------------------------------------------------------------
+const buscar = async () => {
+  await cargarCombos(1)
+}
 
-const currentRow = ref<Combo | null>(null)
+const limpiarFiltro = () => {
+  filtro.busqueda = ''
+  filtro.categoria = definicionCombos.categorias[0]
+}
 
-const insertRow = async (
-  name: string,
-  price: number,
-  dishes: CreateCombo['dishes'],
-  products: CreateCombo['products']
+const cambiarPagina = async (pagina: number) => {
+  await cargarCombos(pagina)
+}
+
+// ---------------------------------------------------------------------------
+// Agregar, editar, eliminar y ver contenido
+// ---------------------------------------------------------------------------
+const comboActual = ref<Combo | null>(null)
+const modalInsertarVisible = ref(false)
+const modalEditarVisible = ref(false)
+const modalEliminarVisible = ref(false)
+const modalContenidoVisible = ref(false)
+
+const abrirModalEditar = (combo: Combo) => {
+  comboActual.value = combo
+  modalEditarVisible.value = true
+}
+
+const abrirModalEliminar = (combo: Combo) => {
+  comboActual.value = combo
+  modalEliminarVisible.value = true
+}
+
+const verContenido = (combo: Combo) => {
+  comboActual.value = combo
+  modalContenidoVisible.value = true
+}
+
+const insertarCombo = async (
+  nombre: string,
+  precio: number,
+  platillos: CreateCombo['dishes'],
+  productos: CreateCombo['products'],
 ) => {
   const combo: CreateCombo = {
-    name,
-    price,
-    dishes,
-    products
+    name: nombre,
+    price: precio,
+    dishes: platillos,
+    products: productos,
   }
+
   try {
     await postCombo(combo)
-    modalInsertEnable.value = false
+    modalInsertarVisible.value = false
     mostrarToast('Combo creado correctamente.', 'exito')
-    await loadCombos()
+    await cargarCombos()
   } catch (err) {
     console.error('No se pudo crear el combo:', err)
     mostrarToast(obtenerMensajeError(err, 'No se pudo crear el combo.'), 'error')
   }
 }
 
-const loadRowInformation = (row: CatalogRow) => {
-  currentRow.value = {
-    id: Number(row.id),
-    name: String(row.name),
-    price: Number(row.price),
-    dishes: row.dishes as Combo['dishes'],
-    products: row.products as Combo['products']
-  }
-}
-
-const openModalUpdate = (row: CatalogRow) => {
-  loadRowInformation(row)
-  console.log(row)
-  modalUpdateEnable.value = true
-}
-
-const openModalDelete = (row: CatalogRow) => {
-  loadRowInformation(row)
-  modalDeleteEnable.value = true
-}
-
-const updateRow = async (
-  name: string,
-  price: number,
-  dishes: UpdateCombo['dishes'],
-  products: UpdateCombo['products']
+const actualizarCombo = async (
+  nombre: string,
+  precio: number,
+  platillos: UpdateCombo['dishes'],
+  productos: UpdateCombo['products'],
 ) => {
-  if (!currentRow.value) return
+  if (!comboActual.value) return
+
   const combo: UpdateCombo = {
-    name,
-    price,
-    dishes,
-    products
+    name: nombre,
+    price: precio,
+    dishes: platillos,
+    products: productos,
   }
+
   try {
-    await putCombo(currentRow.value.id, combo)
-    modalUpdateEnable.value = false
+    await putCombo(comboActual.value.id, combo)
+    modalEditarVisible.value = false
     mostrarToast('Combo actualizado correctamente.', 'actualizar')
-    await loadCombos()
+    await cargarCombos()
   } catch (err) {
     console.error('No se pudo actualizar el combo:', err)
     mostrarToast(obtenerMensajeError(err, 'No se pudo actualizar el combo.'), 'error')
   }
 }
 
-const deleteRow = async (reason: string) => {
-  if (!currentRow.value) return
-  console.log('Motivo de eliminación:', reason)
+const eliminarCombo = async (motivo: string) => {
+  if (!comboActual.value) return
+  console.log('Motivo de eliminación:', motivo)
+
   try {
-    await deleteCombo(currentRow.value.id)
-    modalDeleteEnable.value = false
+    await deleteCombo(comboActual.value.id)
+    modalEliminarVisible.value = false
     mostrarToast('Combo eliminado correctamente.', 'eliminar')
-    await loadCombos()
+    await cargarCombos()
   } catch (err) {
     console.error('No se pudo eliminar el combo:', err)
     mostrarToast(obtenerMensajeError(err, 'No se pudo eliminar el combo.'), 'error')
   }
 }
 
-const seeContent = (row: CatalogRow) => {
-  console.log("llega aquí", row)
-  loadRowInformation(row)
-  modalActionEnable.value = true
-  console.log(modalActionEnable.value)
+// ---------------------------------------------------------------------------
+// Imágenes
+// ---------------------------------------------------------------------------
+const modalImg = ref(false)
+const imgActual = ref<string | null>(null)
+
+const abrirModalImg = (img: string | null) => {
+  imgActual.value = img
+  modalImg.value = true
 }
 
-const changePage = async (page: number) => {
-  await loadCombos(page)
-}
-
+// ---------------------------------------------------------------------------
+// Exportación a Excel
+// ---------------------------------------------------------------------------
 /** Tamaño de página para traer el catálogo completo antes de generar el archivo. */
-const PAGE_SIZE_EXPORT = 100
+const TAMANO_PAGINA_EXPORTACION = 20
 
 /** Recorre todas las páginas con `getCombos` para que el Excel no se corte en la primera. */
 const cargarCatalogo = async () => {
-  const primera = await getCombos(1, PAGE_SIZE_EXPORT, '', 'name')
+  const primera = await getCombos(1, TAMANO_PAGINA_EXPORTACION, '', 'name')
   const items = [...primera.items]
+
   for (let pagina = 2; pagina <= primera.totalPages; pagina++) {
-    const siguiente = await getCombos(pagina, PAGE_SIZE_EXPORT, '', 'name')
+    const siguiente = await getCombos(pagina, TAMANO_PAGINA_EXPORTACION, '', 'name')
+    // Si una página viene vacía no hay nada más que traer.
     if (siguiente.items.length === 0) break
     items.push(...siguiente.items)
   }
+
   return items
 }
 
-const { exportar } = useExportCatalog()
+const { exportando, exportar } = useExportCatalog()
 
-const exportTable = () => {
+const exportarTabla = () => {
   void exportar(
     'excel',
     {
-      columns: CombosColumn.columns,
-      titulo: CombosColumn.titulo,
+      columns: definicionCombos.columnasExcel,
+      titulo: definicionCombos.titulo,
     },
     cargarCatalogo,
   )
 }
 
-const loadCombos = async (p = 1) => {
-  try {
-    const { orderBy } = getProductFilters()
-
-    combos.value = await getCombos(p, 5, filtro.busqueda, orderBy)
-    page.value = combos.value.page
-    totalPages.value = combos.value.totalPages
-    console.log(combos.value)
-  } catch (err) {
-    console.error('No se pudieron cargar los combos:', err)
-  }
-}
-
-const obtenerMensajeError = (err: unknown, mensajeDefault: string) => {
+// ---------------------------------------------------------------------------
+// Utilidades
+// ---------------------------------------------------------------------------
+const obtenerMensajeError = (err: unknown, mensajePorDefecto: string) => {
   if (axios.isAxiosError(err)) {
     const mensaje = err.response?.data?.message
     if (typeof mensaje === 'string' && mensaje.trim() !== '') {
       return mensaje
     }
   }
-  return mensajeDefault
+  return mensajePorDefecto
 }
 
-onMounted(loadCombos)
+onMounted(() => cargarCombos())
 </script>
 
 <template>
@@ -244,60 +276,72 @@ onMounted(loadCombos)
     <div class="flex flex-1 flex-col overflow-hidden">
       <main class="flex-1 overflow-y-auto px-8 py-8">
         <CatalogHeader
-          :titulo="CombosColumn.titulo"
-          :subtitulo="CombosColumn.subtitulo"
-          :texto-boton="CombosColumn.textoBoton"
-          @agregar="modalInsertEnable = true"
+          :titulo="definicionCombos.titulo"
+          :subtitulo="definicionCombos.subtitulo"
+          :texto-boton="definicionCombos.textoBoton"
+          @agregar="modalInsertarVisible = true"
         />
+
         <CatalogFilter
           v-model:busqueda="filtro.busqueda"
           v-model:categoria="filtro.categoria"
-          :categorias="CombosColumn.categorias"
-          @buscar="search"
-          @limpiar="cleanFilter"
+          :categorias="definicionCombos.categorias"
+          @buscar="buscar"
+          @limpiar="limpiarFiltro"
         />
-        <CatalogTable
-          :titulo="CombosColumn.titulo"
-          :columns="CombosColumn.columns"
-          :rows="combos?.items ?? []"
+
+        <CombosTable
+          :combos="combos?.items ?? []"
           :total-registros="combos?.totalCount ?? 0"
-          :pagina="page"
-          :total-paginas="totalPages"
-          @editar="openModalUpdate"
-          @eliminar="openModalDelete"
-          @accion="seeContent"
-          @exportar="exportTable"
-          @cambiar-pagina="changePage"
-        />
-        <CombosModals
-          v-if="modalInsertEnable"
-          :is-insert="true"
-          :modal-title="'Crear Combo'"
-          :modal-subtitle="'Ingrese los datos del combo'"
-          @close="modalInsertEnable = false"
-          @insert="insertRow"
-        />
-        <CombosModals
-          v-if="modalUpdateEnable"
-          :modal-title="'Modificar Combo'"
-          :modal-subtitle="'Cambie los datos del combo'"
-          :combo="currentRow ?? undefined"
-          @close="modalUpdateEnable = false"
-          @update="updateRow"
-        />
-        <CombosModals
-          v-if="modalDeleteEnable"
-          :is-delete="true"
-          :combo="currentRow ?? undefined"
-          @close="modalDeleteEnable = false"
-          @delete="deleteRow"
+          :pagina="paginaActual"
+          :total-paginas="totalPaginas"
+          :tamano-pagina="REGISTROS_POR_PAGINA"
+          :exportando="exportando"
+          @editar="abrirModalEditar"
+          @eliminar="abrirModalEliminar"
+          @ver-contenido="verContenido"
+          @ver-imagen="abrirModalImg"
+          @exportar="exportarTabla"
+          @cambiar-pagina="cambiarPagina"
         />
 
         <CombosModals
-          v-if="modalActionEnable"
+          v-if="modalInsertarVisible"
+          :is-insert="true"
+          :modal-title="'Crear Combo'"
+          :modal-subtitle="'Ingrese los datos del combo'"
+          @close="modalInsertarVisible = false"
+          @insert="insertarCombo"
+        />
+
+        <CombosModals
+          v-if="modalEditarVisible"
+          :modal-title="'Modificar Combo'"
+          :modal-subtitle="'Cambie los datos del combo'"
+          :combo="comboActual ?? undefined"
+          @close="modalEditarVisible = false"
+          @update="actualizarCombo"
+        />
+
+        <CombosModals
+          v-if="modalEliminarVisible"
+          :is-delete="true"
+          :combo="comboActual ?? undefined"
+          @close="modalEliminarVisible = false"
+          @delete="eliminarCombo"
+        />
+
+        <CombosModals
+          v-if="modalContenidoVisible"
           :is-action="true"
-          @close="modalActionEnable = false"
-          :combo="currentRow ?? undefined"
+          :combo="comboActual ?? undefined"
+          @close="modalContenidoVisible = false"
+        />
+
+        <ModalImg
+          v-if="modalImg"
+          :image="imgActual ?? null"
+          @close="modalImg = false"
         />
 
         <AppToast

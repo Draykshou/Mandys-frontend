@@ -4,7 +4,9 @@ export interface Dish {
     id: number
     name: string
     price: number
+    costPrice: number
     recipe: Recipe[]
+    imageUrl: string | null
 }
 
 export interface Recipe {

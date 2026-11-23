@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { DollarSign, OctagonAlert, FileText, X } from 'lucide-vue-next'
-import type { Combo, CreateCombo, UpdateCombo } from '@/types/CombosDtos'
+import type { Combo, CreateCombo, UpdateCombo } from '@/types/catalogs/CombosDtos'
 import DeleteModal from '@/components/modals/DeleteModal.vue'
 import CombosContentModal from '@/components/modals/CombosContentModal.vue'
 import { precioTotal, type ComboItem } from '@/utils/comboPricing'

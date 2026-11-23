@@ -30,6 +30,13 @@ export async function putDish(id: number, payload: UpdateDish): Promise<Dish> {
     return response.data
 }
 
+export async function putDishImage(id: number, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.put(`/dishes/${id}/image`,formData)
+    return response.data
+}
+
 export async function deleteDish(id: number): Promise<void> {
     await api.delete(`/dishes/${id}`)
 }

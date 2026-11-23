@@ -2,83 +2,88 @@
 import { reactive, ref, onMounted } from 'vue'
 import axios from 'axios'
 
+// Componentes externos
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import AppToast from '@/components/AppToast.vue'
 import CatalogHeader from '@/components/CatalogHeader.vue'
 import CatalogFilter from '@/components/CatalogFilter.vue'
-import CatalogTable from '@/components/CatalogTable.vue'
+import DishesTable from '@/components/dishes/DishesTable.vue'
 import DishesModals from '@/components/dishes/DishesModals.vue'
+import ModalImg from '@/components/ModalImg.vue'
+
+// Servicios y tipos
 import { useToast } from '@/composables/useToast'
 import { useExportCatalog } from '@/composables/useExportCatalog'
-
-import type { CatalogColumn, CatalogRow} from '@/types/CatalogColumns/catalog'
+import { postDish, putDish, deleteDish, getDishes, putDishImage } from '@/service/DishesService'
 import type { CreateDish, Dish, Dishes, UpdateDish } from '@/types/catalogs/DishesDtos'
 
-import { postDish, putDish, deleteDish, getDishes } from '@/service/DishesService'
+// posiblemente eliminar
+import type { CatalogColumn } from '@/types/CatalogColumns/catalog'
 
+// Acceso a la página (roles que pueden entrar)
 definePage({
   meta: { roles: ["Administrador", "Gerente de Operaciones"]},
 });
 
+// ---------------------------------------------------------------------------
+// Avisos
+// ---------------------------------------------------------------------------
 const { state: toast, mostrar: mostrarToast, cerrar: cerrarToast } = useToast()
 
-interface CatalogoDef {
+// ---------------------------------------------------------------------------
+// Definición del catálogo
+// ---------------------------------------------------------------------------
+interface DefinicionCatalogo {
   titulo: string
   subtitulo: string
   textoBoton: string
   categorias: string[]
-  columns: CatalogColumn[]
+  columnasExcel: CatalogColumn[]
 }
 
-const dishes = ref<Dishes | null>(null)
-
-const DishesColumn: CatalogoDef = {
+const definicionPlatillos: DefinicionCatalogo = {
   titulo: 'Platillos',
   subtitulo: 'Gestión de los platillos del restaurante',
   textoBoton: 'Agregar Platillo',
   categorias: ['Todos', 'Alfabetico A-Z', 'Alfabetico Z-A', 'Mayor precio', 'Menor precio'],
-  columns: [
+  columnasExcel: [
     { key: 'name', label: 'Nombre', type: 'text' },
     { key: 'price', label: 'Precio', type: 'currency' },
     { key: 'recipe', label: 'Recetas', type: 'button' },
   ],
 }
 
-const page = ref(1)
-const totalPages = ref(1)
+// ---------------------------------------------------------------------------
+// Estado de la vista
+// ---------------------------------------------------------------------------
+const REGISTROS_POR_PAGINA = 5
 
-// Filtro
+const platillos = ref<Dishes | null>(null)
+const paginaActual = ref(1)
+const totalPaginas = ref(1)
+
 const filtro = reactive({
   busqueda: '',
-  categoria: DishesColumn.categorias[0],
+  categoria: definicionPlatillos.categorias[0],
 })
 
-
-function cleanFilter() {
-  filtro.busqueda = ''
-  filtro.categoria = DishesColumn.categorias[0]
-}
-
-const search = async () => {
-  await loadDishes(1)
-}
-
-const getProductFilters = () => {
+// ---------------------------------------------------------------------------
+// Carga de datos
+// ---------------------------------------------------------------------------
+const obtenerFiltrosPlatillos = () => {
   let orderBy = ''
+
   switch (filtro.categoria) {
     case 'Alfabetico A-Z':
       orderBy = 'name'
       break
-
     case 'Alfabetico Z-A':
       orderBy = '-name'
       break
-
     case 'Mayor precio':
       orderBy = '-price'
       break
-
     case 'Menor precio':
       orderBy = 'price'
       break
@@ -87,153 +92,185 @@ const getProductFilters = () => {
       break
   }
 
-  return {
-    orderBy
-  }
-}
-// CUD
-const modalInsertEnable = ref(false)
-const modalUpdateEnable = ref(false)
-const modalDeleteEnable = ref(false)
-const modalActionEnable = ref(false)
-
-const currentRow = ref<Dish | null>(null)
-
-const loadRowInformation=(row:CatalogRow)=>{
-    currentRow.value={
-        id: Number(row.id),
-        name: String(row.name),
-        price: Number(row.price),
-        recipe: row.recipe as Dish['recipe']
-    }
+  return { orderBy }
 }
 
-const insertRow = async(name: string, price: number, recipe: CreateDish['recipe'])=>{
-  const dish:CreateDish={
-      name,
-      price,
-      recipe
-  }
-  try{
-      await postDish(dish)
-      modalInsertEnable.value = false
-      mostrarToast('Platillo creado correctamente.','exito')
-      console.log(dish)
-      await loadDishes()
-  }catch(err){
-      console.error('No se pudo crear el platillo:', err)
-      mostrarToast(obtenerMensajeError(err,'No se pudo crear el platillo.'),'error')
-  }
-}
-
-const updateRow = async(name: string, price: number, recipe: UpdateDish['recipe'])=>{
-    if(!currentRow.value)return
-    const dish:UpdateDish={
-        name,
-        price,
-        recipe
-    }
-    try{
-        await putDish(currentRow.value.id,dish)
-        modalUpdateEnable.value = false
-        mostrarToast('Platillo actualizado correctamente.','actualizar')
-        console.log(dish)
-        await loadDishes()
-    }catch(err){
-        console.error('No se pudo actualizar el platillo:',err)
-        mostrarToast(obtenerMensajeError(err,'No se pudo actualizar el platillo.'),'error')
-    }
-}
-
-const openModalUpdate = (row: CatalogRow) => {
-  loadRowInformation(row)
-  modalUpdateEnable.value = true
-}
-
-
-const deleteRow = async () => {
+const cargarPlatillos = async (pagina = 1) => {
   try {
-    await deleteDish(currentRow.value?.id as number)
-    modalDeleteEnable.value = false
-    mostrarToast('Producto eliminado correctamente.','eliminar')
-    await loadDishes()
-    
+    const { orderBy } = obtenerFiltrosPlatillos()
+    const respuesta = await getDishes(pagina, REGISTROS_POR_PAGINA, filtro.busqueda, orderBy)
+
+    platillos.value = respuesta
+    paginaActual.value = respuesta.page
+    totalPaginas.value = respuesta.totalPages
   } catch (err) {
-    console.error("No se pudo crear el producto:", err)
-    modalDeleteEnable.value = false
-    mostrarToast(obtenerMensajeError(err,'No se pudo crear el platillo.'),'error')
+    console.error('No se pudieron cargar los platillos:', err)
   }
 }
 
-const openModalDelete = (row: CatalogRow) => {
-  loadRowInformation(row)
-  modalDeleteEnable.value = true
+// ---------------------------------------------------------------------------
+// Filtros, búsqueda y paginación
+// ---------------------------------------------------------------------------
+const buscar = async () => {
+  await cargarPlatillos(1)
 }
 
-const seeRecipe = (row: CatalogRow) => {
-  console.log("llega aquí", row)
-  loadRowInformation(row)
-  modalActionEnable.value = true
-  console.log(modalActionEnable.value)
+const limpiarFiltro = () => {
+  filtro.busqueda = ''
+  filtro.categoria = definicionPlatillos.categorias[0]
 }
 
-const changePage = async (page: number) => {
-  await loadDishes(page)
+const cambiarPagina = async (pagina: number) => {
+  await cargarPlatillos(pagina)
 }
+
+// ---------------------------------------------------------------------------
+// Agregar, editar, eliminar y ver receta
+// ---------------------------------------------------------------------------
+const platilloActual = ref<Dish | null>(null)
+const modalInsertarVisible = ref(false)
+const modalEditarVisible = ref(false)
+const modalEliminarVisible = ref(false)
+const modalRecetaVisible = ref(false)
+
+const abrirModalEditar = (platillo: Dish) => {
+  platilloActual.value = platillo
+  modalEditarVisible.value = true
+}
+
+const abrirModalEliminar = (platillo: Dish) => {
+  platilloActual.value = platillo
+  modalEliminarVisible.value = true
+}
+
+const verReceta = (platillo: Dish) => {
+  platilloActual.value = platillo
+  modalRecetaVisible.value = true
+}
+
+const insertarPlatillo = async (nombre: string, precio: number, receta: CreateDish['recipe'], imagen: File | null) => {
+  const platillo: CreateDish = {
+    name: nombre,
+    price: precio,
+    recipe: receta,
+  }
+
+  try {
+    const response = await postDish(platillo)
+
+    if(imagen && response.id){
+      await putDishImage(response.id, imagen)
+    }
+
+    modalInsertarVisible.value = false
+    mostrarToast('Platillo creado correctamente.', 'exito')
+    await cargarPlatillos()
+  } catch (err) {
+    console.error('No se pudo crear el platillo:', err)
+    mostrarToast(obtenerMensajeError(err, 'No se pudo crear el platillo.'), 'error')
+  }
+}
+
+const actualizarPlatillo = async (nombre: string, precio: number, receta: UpdateDish['recipe'], imagen: File | null) => {
+  if (!platilloActual.value) return
+
+  const platillo: UpdateDish = {
+    name: nombre,
+    price: precio,
+    recipe: receta,
+  }
+
+  try {
+
+    const response = await putDish(platilloActual.value.id, platillo)
+
+    if(imagen && response.id){
+      await putDishImage(response.id, imagen)
+    }
+
+    await putDish(platilloActual.value.id, platillo)
+    modalEditarVisible.value = false
+    mostrarToast('Platillo actualizado correctamente.', 'actualizar')
+    await cargarPlatillos()
+  } catch (err) {
+    console.error('No se pudo actualizar el platillo:', err)
+    mostrarToast(obtenerMensajeError(err, 'No se pudo actualizar el platillo.'), 'error')
+  }
+}
+
+const eliminarPlatillo = async () => {
+  try {
+    await deleteDish(platilloActual.value?.id as number)
+    modalEliminarVisible.value = false
+    mostrarToast('Platillo eliminado correctamente.', 'eliminar')
+    await cargarPlatillos()
+  } catch (err) {
+    console.error('No se pudo eliminar el platillo:', err)
+    modalEliminarVisible.value = false
+    mostrarToast(obtenerMensajeError(err, 'No se pudo eliminar el platillo.'), 'error')
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Imágenes
+// ---------------------------------------------------------------------------
+const modalImg = ref(false)
+const imgActual = ref<string | null>(null)
+
+const abrirModalImg = (img: string | null) => {
+  imgActual.value = img
+  console.log(imgActual.value)
+  modalImg.value = true
+}
+
+// ---------------------------------------------------------------------------
+// Exportación a Excel
+// ---------------------------------------------------------------------------
+/** Tamaño de página para traer el catálogo completo antes de generar el archivo. */
+const TAMANO_PAGINA_EXPORTACION = 20
 
 /** `getDishes` pagina en servidor: recorre todas las páginas para no cortar el Excel. */
-const PAGE_SIZE_EXPORT = 100
-
 const cargarCatalogo = async () => {
-  const primera = await getDishes(1, PAGE_SIZE_EXPORT, '', 'name')
+  const primera = await getDishes(1, TAMANO_PAGINA_EXPORTACION, '', 'name')
   const items = [...primera.items]
+
   for (let pagina = 2; pagina <= primera.totalPages; pagina++) {
-    const siguiente = await getDishes(pagina, PAGE_SIZE_EXPORT, '', 'name')
+    const siguiente = await getDishes(pagina, TAMANO_PAGINA_EXPORTACION, '', 'name')
+    // Si una página viene vacía no hay nada más que traer.
     if (siguiente.items.length === 0) break
     items.push(...siguiente.items)
   }
+
   return items
 }
 
 const { exportando, exportar } = useExportCatalog()
 
-const exportTable = () => {
+const exportarTabla = () => {
   void exportar(
     'excel',
     {
-      columns: DishesColumn.columns,
-      titulo: DishesColumn.titulo,
+      columns: definicionPlatillos.columnasExcel,
+      titulo: definicionPlatillos.titulo,
     },
     cargarCatalogo,
   )
 }
 
-const loadDishes = async (p = 1) => {
-  try{
-    const { orderBy } = getProductFilters()
-
-    dishes.value = await getDishes(p, 5, filtro.busqueda, orderBy)
-    page.value = dishes.value.page
-    totalPages.value = dishes.value.totalPages
-    console.log(dishes.value)
-  }
-  catch(err){
-    console.error('No se pudieron cargar los dishos:', err)
-  }
-}
-
-const obtenerMensajeError=(err:unknown,mensajeDefault:string)=>{
-    if(axios.isAxiosError(err)){
-        const mensaje=err.response?.data?.message
-        if(typeof mensaje==='string'&&mensaje.trim()!==''){
-            return mensaje
-        }
+// ---------------------------------------------------------------------------
+// Utilidades
+// ---------------------------------------------------------------------------
+const obtenerMensajeError = (err: unknown, mensajePorDefecto: string) => {
+  if (axios.isAxiosError(err)) {
+    const mensaje = err.response?.data?.message
+    if (typeof mensaje === 'string' && mensaje.trim() !== '') {
+      return mensaje
     }
-    return mensajeDefault
+  }
+  return mensajePorDefecto
 }
 
-onMounted(loadDishes)
-
+onMounted(() => cargarPlatillos())
 </script>
 
 <template>
@@ -245,67 +282,72 @@ onMounted(loadDishes)
 
       <main class="flex-1 overflow-y-auto px-8 py-8">
         <CatalogHeader
-          :titulo="DishesColumn.titulo"
-          :subtitulo="DishesColumn.subtitulo"
-          :texto-boton="DishesColumn.textoBoton"
-          @agregar="modalInsertEnable = true"
+          :titulo="definicionPlatillos.titulo"
+          :subtitulo="definicionPlatillos.subtitulo"
+          :texto-boton="definicionPlatillos.textoBoton"
+          @agregar="modalInsertarVisible = true"
         />
 
         <CatalogFilter
           v-model:busqueda="filtro.busqueda"
           v-model:categoria="filtro.categoria"
-          :categorias="DishesColumn.categorias"
-          @buscar="search"
-          @limpiar="cleanFilter"
+          :categorias="definicionPlatillos.categorias"
+          @buscar="buscar"
+          @limpiar="limpiarFiltro"
         />
 
-        <CatalogTable
-          :titulo="DishesColumn.titulo"
-          :columns="DishesColumn.columns"
-          :rows="dishes?.items ?? []"
-          :total-registros="dishes?.totalCount ?? 0"
-          :pagina="page"
-          :total-paginas="totalPages"
-          formato-export="excel"
+        <DishesTable
+          :platillos="platillos?.items ?? []"
+          :total-registros="platillos?.totalCount ?? 0"
+          :pagina="paginaActual"
+          :total-paginas="totalPaginas"
+          :tamano-pagina="REGISTROS_POR_PAGINA"
           :exportando="exportando"
-          @editar="openModalUpdate"
-          @eliminar="openModalDelete"
-          @accion="seeRecipe"
-          @exportar="exportTable"
-          @cambiar-pagina="changePage"
+          @editar="abrirModalEditar"
+          @eliminar="abrirModalEliminar"
+          @ver-receta="verReceta"
+          @ver-imagen="abrirModalImg"
+          @exportar="exportarTabla"
+          @cambiar-pagina="cambiarPagina"
         />
 
         <DishesModals
-          v-if="modalInsertEnable"
+          v-if="modalInsertarVisible"
           :is-insert="true"
           :modal-title="'Crear Platillo'"
           :modal-subtitle="'Ingrese los datos del platillo'"
-          @close="modalInsertEnable = false"
-          @insert="insertRow"
+          @close="modalInsertarVisible = false"
+          @insert="insertarPlatillo"
         />
 
         <DishesModals
-          v-if="modalUpdateEnable"
+          v-if="modalEditarVisible"
           :modal-title="'Modificar Platillo'"
           :modal-subtitle="'cambie los datos del platillo'"
-          @close="modalUpdateEnable = false"
-          @update="updateRow"
-          :dish="currentRow ?? undefined"
+          :dish="platilloActual ?? undefined"
+          @close="modalEditarVisible = false"
+          @update="actualizarPlatillo"
         />
 
         <DishesModals
-          v-if="modalDeleteEnable"
+          v-if="modalEliminarVisible"
           :is-delete="true"
-          @close="modalDeleteEnable = false"
-          @delete="deleteRow"
-          :dish="currentRow ?? undefined"
+          :dish="platilloActual ?? undefined"
+          @close="modalEliminarVisible = false"
+          @delete="eliminarPlatillo"
         />
 
         <DishesModals
-          v-if="modalActionEnable"
+          v-if="modalRecetaVisible"
           :is-action="true"
-          @close="modalActionEnable = false"
-          :dish="currentRow ?? undefined"
+          :dish="platilloActual ?? undefined"
+          @close="modalRecetaVisible = false"
+        />
+
+        <ModalImg
+          v-if="modalImg"
+          :image="imgActual ?? null"
+          @close="modalImg = false"
         />
 
         <AppToast
